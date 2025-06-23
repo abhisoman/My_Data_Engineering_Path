@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEA-C01 Theory Blitz #2: DynamoDB & CloudWatch</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #fff;
+            color: #1c1e21;
+            margin: 0;
+            padding: 1rem 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #dddfe2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #000;
+            font-weight: 600;
+            margin: 0;
+        }
+        h1 span {
+            font-size: 1.1rem;
+            color: #606770;
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        h2 {
+            font-size: 2.2rem;
+            color: #FF9900; /* AWS Orange */
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        h3 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: #232F3E; /* AWS Dark Blue */
+            margin-top: 2rem;
+        }
+        .task-statement {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #d62976;
+            margin-top: 2.5rem;
+        }
+        p, li {
+            font-size: 1.05rem;
+            color: #333;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        .deep-dive-section {
+            border-left: 4px solid #FF9900;
+            background-color: #fafafa;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+        .deep-dive-section h4 {
+            font-size: 1.25rem;
+            margin-top: 0;
+            color: #232F3E;
+        }
+        .deep-dive-section strong {
+            color: #c5221f;
+        }
+        .well-architected {
+            border: 1px solid #e2f5e7;
+            background-color: #f8fdf9;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+        }
+        .well-architected strong {
+            color: #218838;
+        }
+        .exam-prep {
+            border: 2px solid #28a745;
+            background-color: #e2f5e7;
+            padding: 1rem 1.5rem;
+            margin-top: 1.5rem;
+            border-radius: 8px;
+        }
+        .exam-prep strong {
+            color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DEA-C01 Theory Blitz: Module 3
+                <span>Deep Dive: DynamoDB & CloudWatch</span>
+            </h1>
+        </header>
+
+        <h2 class="task-statement">Domain 2 (Conclusion): Data Store Management</h2>
+        
+        <h3>Key Service: Amazon DynamoDB</h3>
+        <p><strong>Hawk-Eye View:</strong> DynamoDB is a fully managed NoSQL key-value and document database. Its entire reason for existence is providing consistent, **single-digit millisecond latency at any scale**. It's built for Online Transaction Processing (OLTP) workloads that demand extreme speed and scalability.</p>
+        
+        <div class="deep-dive-section">
+            <h4>Exam-Critical Detail: Partition Keys and Sort Keys</h4>
+            <p><strong>The Core Concept:</strong> This is the most critical DynamoDB concept. Your table's primary key determines how data is stored and accessed.
+                <ul>
+                    <li><strong>Partition Key (PK):</strong> This key is hashed to determine the physical partition where the data is stored. Your access pattern **must** include the PK. A good PK has high cardinality (many unique values) to distribute data evenly.</li>
+                    <li><strong>Sort Key (SK):</strong> (Optional) When used with a PK, this is called a **composite primary key**. All items with the same PK are stored together, ordered by the SK. This allows you to perform complex queries like "get all orders for customer_123 from last month."</li>
+                </ul>
+            </p>
+            <p><strong>The Real-World Scenario (SynthMart):</strong> For our `orders` table, we choose `customer_id` as the PK and `order_date` as the SK. This allows us to very efficiently query for all orders for a specific customer, optionally filtering by a date range.</p>
+            
+            <div class="well-architected">
+                <strong>Well-Architected Pillar (Performance Efficiency): Choosing the Right Primary Key</strong>
+                <p>An architect knows that choosing the wrong Partition Key for DynamoDB leads to **"hot partitions"**, where one physical partition gets a disproportionate amount of traffic, leading to throttling and performance degradation. For SynthMart's product catalog, using `category` as the PK would be a disaster (all "Laptops" would hit one partition). Using `product_id` as the PK is the correct choice as it distributes the load evenly.</p>
+            </div>
+        </div>
+
+        <h2 class="task-statement">Domain 3 (Introduction): Data Operations and Support</h2>
+        <p>This domain is about what happens *after* the pipeline is built. How do you monitor it, troubleshoot it, and ensure it runs reliably? Your CKA experience is highly relevant here, but we focus on the AWS serverless tooling.</p>
+        
+        <h3>Key Service: Amazon CloudWatch</h3>
+        <p><strong>Hawk-Eye View:</strong> CloudWatch is the central nervous system for observability in AWS. If you can't see what your system is doing, you can't operate it. CloudWatch collects monitoring and operational data in the form of logs, metrics, and events.</p>
+        <p><strong>Visualization: The Observability Loop</strong></p>
+        <pre>
+ [AWS Services: Glue, Lambda, Kinesis]
+             |
+             +-- Emit Logs & Metrics --> [ Amazon CloudWatch ] --+
+                                               |                 |
+                                    (Analyzes & Aggregates)      |
+                                               |                 V
+                                               |           [ CloudWatch Alarms ]
+                                               |           (e.g., "Error Count > 5")
+                                               |                 |
+                                               |                 V
+                                               +---- Triggers -> [ SNS Notification ] -> [You]
+</pre>
+        <div class="deep-dive-section">
+            <h4>Core Concepts</h4>
+            <ul>
+                <li><strong>Logs:</strong> Raw text output from your applications and services (e.g., the output of a Glue script or Lambda function). Stored in `Log Groups`.</li>
+                <li><strong>Metrics:</strong> Time-series data points representing a variable over time (e.g., `CPUUtilization`, `ThrottledRequests`). Nearly every AWS service emits metrics automatically.</li>
+                <li><strong>Alarms:</strong> The proactive component. You watch a metric over a period, and if it breaches a threshold you define, the alarm changes state and can trigger an action.</li>
+                <li><strong>Events (now part of EventBridge):</strong> A stream of system events representing changes in AWS resources. You can write rules to react to these events (e.g., "When a Glue Job state changes to FAILED, trigger a Lambda function").</li>
+            </ul>
+
+            <h4>A Junior Engineer's Daily Task</h4>
+            <p>A daily ETL job fails. The junior engineer receives an automated SNS alert (triggered by a CloudWatch Alarm on the `glue.driver.aggregate.failedStages` metric). Their first action is to navigate to the CloudWatch Log Group for that specific job run, find the exact error message in the logs, and begin troubleshooting.</p>
+
+            <div class="well-architected">
+                <strong>Well-Architected Pillar (Operational Excellence): Automating Responses</strong>
+                <p>An architect doesn't just set up alerts for a human to look at. They design automated responses. For SynthMart, when a Kinesis stream experiences high `WriteProvisionedThroughputExceeded` for 5 straight minutes (monitored by a CloudWatch Alarm), that alarm doesn't just send an email. It triggers an **EventBridge rule** which invokes a **Lambda function** that automatically scales up the Kinesis stream by adding more shards via the AWS SDK. This is self-healing infrastructure.</p>
+            </div>
+        </div>
+        
+        <div class="exam-prep">
+            <strong>Exam Prep (Domains 2 & 3):</strong> Find questions on `examtopics.com` related to `DynamoDB` and `CloudWatch`.
+            <ul>
+                <li>For DynamoDB, focus on questions that require **low-latency key-value access**. If they mention hot partitions, the answer is always related to choosing a better, high-cardinality Partition Key.</li>
+                <li>For CloudWatch, any question about **monitoring, logging, or alerting** will involve CloudWatch. If the question asks to trigger an action based on a metric, the answer is a `CloudWatch Alarm`. If it asks to trigger an action based on an event (like a service changing state), the answer involves `EventBridge`.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
