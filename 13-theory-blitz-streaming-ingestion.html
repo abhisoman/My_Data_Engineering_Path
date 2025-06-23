@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEA-C01 Theory Blitz #1: Streaming Ingestion</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #fff;
+            color: #1c1e21;
+            margin: 0;
+            padding: 1rem 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #dddfe2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #000;
+            font-weight: 600;
+            margin: 0;
+        }
+        h1 span {
+            font-size: 1.1rem;
+            color: #606770;
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        h2 {
+            font-size: 2.2rem;
+            color: #FF9900; /* AWS Orange */
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        h3 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: #232F3E; /* AWS Dark Blue */
+            margin-top: 2rem;
+        }
+        .task-statement {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #d62976;
+            margin-top: 2.5rem;
+        }
+        p, li {
+            font-size: 1.05rem;
+            color: #333;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        .multi-cloud-note {
+            border: 1px solid #cce0ff;
+            background-color: #f0f8ff;
+            padding: 0.5rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+        .multi-cloud-note strong {
+            color: #0056b3;
+        }
+        .deep-dive-section {
+            border-left: 4px solid #FF9900;
+            background-color: #fafafa;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+        .deep-dive-section h4 {
+            font-size: 1.25rem;
+            margin-top: 0;
+            color: #232F3E;
+        }
+        .deep-dive-section strong {
+            color: #c5221f;
+        }
+        .exam-prep {
+            border: 2px solid #28a745;
+            background-color: #e2f5e7;
+            padding: 1rem 1.5rem;
+            margin-top: 1.5rem;
+            border-radius: 8px;
+        }
+        .exam-prep strong {
+            color: #218838;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DEA-C01 Theory Blitz #1
+                <span>Deep Dive into Streaming Ingestion</span>
+            </h1>
+        </header>
+
+        <h2>The Hawk-Eye View: The Real-Time Problem</h2>
+        <p><strong>The Business Problem:</strong> SynthMart wants to analyze user behavior on their website *as it happens*. They want to power live dashboards, detect fraudulent activity in seconds, and eventually offer real-time product recommendations. Writing every click to a traditional database would be slow and cripple the system.</p>
+        <p><strong>The Architectural Purpose:</strong> We need a "front door" for this firehose of data—an ingestion layer that can handle massive volumes of small, continuous events reliably and make them available for processing in near real-time.</p>
+        <p><strong>Visualization:</strong></p>
+        <pre>
+ [Website/Mobile App] -> [STREAMING INGESTION LAYER] -> [Processing/Storage]
+  (User Clicks)          (Kinesis Family)             (Lambda, KDA, S3)
+</pre>
+        
+        <hr>
+
+        <h3>Deep Dive: Amazon Kinesis Data Streams (KDS)</h3>
+        <p>Think of KDS as a massive, durable, multi-lane highway for data. It's the core "pipe" for custom real-time processing.</p>
+        <div class="multi-cloud-note">
+            <strong>Multi-Cloud Counterparts:</strong> GCP: <code>Google Cloud Pub/Sub</code>, Azure: <code>Azure Event Hubs</code>
+        </div>
+        
+        <div class="deep-dive-section">
+            <h4>Exam-Critical Detail: Shards & Capacity</h4>
+            <p><strong>The Core Concept:</strong> A **Shard** is the base unit of throughput in a Kinesis stream. Each shard provides 1 MB/s of write capacity (or 1,000 records/sec) and 2 MB/s of read capacity. The total capacity of your stream is the sum of its shards. You can add or remove shards to scale the stream up or down.</p>
+            <p><strong>The Real-World Scenario (SynthMart):</strong> During a normal day, SynthMart's traffic might only require 5 shards. But during a flash sale, traffic spikes 10x. An architect would have a plan to scale the stream from 5 to 50 shards before the sale begins and then scale it back down afterward to save costs.</p>
+            <p><strong>A Junior Engineer's Daily Task:</strong> They would be responsible for monitoring the CloudWatch metrics for the Kinesis stream, specifically `WriteProvisionedThroughputExceeded` and `ReadProvisionedThroughputExceeded`. If these metrics spike, it means the stream is under-provisioned, and they would need to alert the senior engineer to initiate the scaling process.</p>
+            <p><strong>The Architect's Decision Point:</strong> You must choose between **Provisioned Mode** (you manage the shard count manually, better for predictable workloads) and **On-Demand Mode** (AWS manages scaling automatically, better for unpredictable workloads but at a higher cost). This is a classic cost vs. performance trade-off.</p>
+        </div>
+        
+        <div class="deep-dive-section">
+            <h4>Exam-Critical Detail: Partition Keys</h4>
+            <p><strong>The Core Concept:</strong> A **Partition Key** is a string you provide with every record you send to Kinesis (e.g., `user_id`, `product_id`). Kinesis uses a hash of this key to determine which shard the record will go into. **All records with the same partition key will always go to the same shard.** This is how Kinesis guarantees ordering for a specific entity.</p>
+            <p><strong>The Real-World Scenario (SynthMart):</strong> To analyze a user's journey through the website, we must process their clicks in the exact order they occurred. By using `user_id` as our partition key, we ensure that all events from `user_123` land on the same shard and can be processed sequentially by a consumer.</p>
+            <p><strong>A Junior Engineer's Daily Task:</strong> A bug in the producer application might be sending all records with a static, hardcoded partition key (e.g., `"1"`). The junior engineer would notice that one shard in the stream is running "hot" (maxed out on throughput) while others are idle. Their task would be to identify the problematic producer and fix the code to use a dynamic key like `user_id`.</p>
+            <p><strong>The Architect's Decision Point:</strong> You must select the right partition key. A key with high cardinality (many unique values, like a `user_id` or `session_id`) is good for even distribution. A key with low cardinality (like `event_type`) would create a "hot shard" problem and is a poor choice. Your choice of partition key directly impacts the scalability and performance of the entire system.</p>
+        </div>
+
+        <div class="exam-prep">
+            <strong>Exam Prep & Question Patterns (examtopics.com)</strong>
+            <p>Go to the website and find 3-5 questions related to <code>Kinesis Data Streams</code>. Notice the patterns. They will try to trick you on:</p>
+            <ul>
+                <li>Scenarios where you need **ordering guarantees** (Answer: KDS with a proper Partition Key).</li>
+                <li>Situations with **multiple consumers** needing to read the same stream (Answer: KDS with multiple consumer apps, possibly using Enhanced Fan-Out).</li>
+                <li>Questions about handling **"hot shards"** (Answer: Choose a high-cardinality partition key).</li>
+            </ul>
+        </div>
+        
+        <hr>
+
+        <h3>Deep Dive: Amazon Kinesis Data Firehose</h3>
+        <p>Think of Firehose as a managed, automated "conveyor belt." Its only job is to reliably deliver streaming data from a source to a destination.</p>
+        
+        <div class="deep-dive-section">
+            <h4>Exam-Critical Detail: Buffering & Delivery</h4>
+            <p><strong>The Core Concept:</strong> Firehose is not truly real-time; it's **near real-time**. It **buffers** incoming data before delivering it to the destination. You configure this buffering based on size (e.g., "deliver every 128 MB") or time (e.g., "deliver every 5 minutes"), whichever comes first.</p>
+            <p><strong>The Real-World Scenario (SynthMart):</strong> We want to store our clickstream data in S3. Storing millions of tiny, individual JSON files would be incredibly inefficient to query later. Firehose solves this by buffering the clicks for, say, 5 minutes or until it has 100 MB of data, and then writing a single, larger, more optimized file to S3.</p>
+            <p><strong>A Junior Engineer's Daily Task:</strong> The analytics team might complain that data is appearing in S3 too slowly. The junior engineer's task would be to investigate the Firehose configuration. They might find the buffer hints are set to 15 minutes and 128 MB, and they would experiment with lowering the time buffer to 1-2 minutes to increase delivery frequency.</p>
+            <p><strong>The Architect's Decision Point:</strong> You must decide the buffering strategy. Small, frequent batches (low time buffer) provide fresher data but result in many small files in S3 (which can be bad for query performance). Large, infrequent batches are more cost-effective and create fewer, larger files but increase latency. You must balance this trade-off based on business needs.</p>
+        </div>
+
+        <div class="exam-prep">
+            <strong>Exam Prep & Question Patterns (examtopics.com)</strong>
+            <p>Find 3-5 questions related to <code>Kinesis Data Firehose</code>. The key patterns are:</p>
+            <ul>
+                <li>Scenarios asking for the **simplest way to get streaming data into S3/Redshift** (Answer: Firehose).</li>
+                <li>Questions about performing **light, stateless transformations** (like converting data formats) during ingestion (Answer: Firehose with a Lambda function).</li>
+                <li>Distinguishing it from KDS. If the question doesn't mention custom consumers or strict ordering, Firehose is often the more direct, cost-effective answer.</li>
+            </ul>
+        </div>
+
+    </div>
+</body>
+</html>
