@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task #1: Data Landing Verification</title>
+    <style>
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fff; color: #1c1e21; margin: 0; padding: 1rem 2rem; line-height: 1.6;}
+        .container {max-width: 1000px; margin: 0 auto;}
+        header {text-align: center; border-bottom: 1px solid #dddfe2; padding-bottom: 1.5rem; margin-bottom: 2rem;}
+        h1 {font-size: 2.5rem; color: #000; font-weight: 600; margin: 0;}
+        h1 span {font-size: 1.1rem; color: #606770; display: block; margin-top: 0.5rem; font-weight: 400;}
+        h2 {font-size: 2rem; color: #1877f2; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        p, li {font-size: 1.05rem; color: #333;}
+        code {font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; color: #d63384;}
+        pre {background-color: #282c34; color: #abb2bf; padding: 1rem 1.5rem; border-radius: 8px; overflow-x: auto; font-size: 0.9em;}
+        .task-box {border: 2px solid #1877f2; background-color: #f0f8ff; padding: 1rem 1.5rem; margin-top: 2rem; border-radius: 8px;}
+        .task-box h3 {margin-top:0;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hands-On Task #1: Junior Data Engineer
+                <span>TICKET-001: Data Landing Verification</span>
+            </h1>
+        </header>
+
+        <h2>The Scenario</h2>
+        <p>The real-time Kinesis pipeline is now active. Before we build the downstream transformation jobs, we need a simple, automated way to verify that data is landing correctly in our S3 data lake every hour. This prevents us from processing incomplete or missing data.</p>
+        
+        <div class="task-box">
+            <h3>Your Mission</h3>
+            <p>Write a single Python script (`verify_landing.py`) that performs the following checks:</p>
+            <ol>
+                <li><strong>Check for New Data:</strong> Using `boto3`, the script must check the `aida-lab-landing-zone` S3 bucket. It should verify that new data files exist within the partition structure created by Firehose for the **current UTC hour**. (Firehose creates prefixes like `YYYY/MM/DD/HH/`).</li>
+                <li><strong>Check for Metadata:</strong> (This step simulates the Glue Crawler's role). Your script does not need to run a crawler, but it should contain a placeholder function and a print statement indicating that "In a real pipeline, we would now trigger a Glue Crawler or check the Glue Data Catalog for the new partition."</li>
+                <li><strong>Provide a Clear Status:</strong> The script should print a clear `SUCCESS: Data found for the current hour.` message if files are present, or a `FAILURE: No data found for the current hour.` message if they are not.</li>
+            </ol>
+            
+            <h3>Acceptance Criteria</h3>
+            <ul>
+                <li>A working Python script that uses `boto3`.</li>
+                <li>The script correctly identifies the S3 prefix for the current UTC hour.</li>
+                <li>The script prints a clear success or failure message to the console.</li>
+            </ul>
+
+            <h3>Core Concepts Cemented</h3>
+            <ul>
+                <li>Interacting with S3 programmatically using Python (`boto3`).</li>
+                <li>Working with S3 prefixes and object listing.</li>
+                <li>Understanding the relationship between data landing and metadata updates.</li>
+                <li>Basic operational scripting and validation.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
