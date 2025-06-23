@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Dive #2: Python for Data Transformation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #fff;
+            color: #1c1e21;
+            margin: 0;
+            padding: 1rem 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #dddfe2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #000;
+            font-weight: 600;
+            margin: 0;
+        }
+        h1 span {
+            font-size: 1.1rem;
+            color: #606770;
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        h2 {
+            font-size: 2rem;
+            color: #28a745; /* Green for Python Path */
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #232F3E; /* AWS Dark Blue */
+            margin-top: 2rem;
+        }
+        p, li {
+            font-size: 1.05rem;
+            color: #333;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        .tip {
+            border-left: 4px solid #f0b90c;
+            background-color: #fffbeb;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .tip strong {
+            color: #d9820a;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .task {
+            border: 2px solid #28a745;
+            background-color: #e2f5e7;
+            padding: 1rem 1.5rem;
+            margin-top: 2rem;
+            border-radius: 8px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Dive #2: Productive Pivot
+                <span>Python for Data Transformation (JSON to CSV)</span>
+            </h1>
+        </header>
+
+        <h2>1. The Hawk-Eye View</h2>
+        <p><strong>The Business Problem:</strong> SynthMart's streaming data is produced in a raw, semi-structured JSON format. While this is great for real-time ingestion, our business analysts need clean, structured, tabular data (like a CSV or a database table) to perform their analysis and create dashboards.</p>
+        <p><strong>The Architectural Purpose:</strong> Today's task simulates the core logic of a transformation job. In AWS, this Python code would be embedded within a Glue ETL script or a Lambda function attached to a Kinesis Firehose stream. We are building the "engine" without worrying about the "chassis" (the AWS service) for now.</p>
+        <p><strong>Visualization:</strong></p>
+        <pre>
+ [ Raw JSON Log File ] -> [ Our Python Script ] -> [ Clean, Structured CSV File ]
+  (Simulating data       (Reads, Parses,          (Ready for analysts)
+   from Kinesis)          Transforms)
+</pre>
+
+        <div class="tip">
+            <strong>Architect's Insight:</strong> The logic is king. The specific AWS service you run your code on (Glue, Lambda, EMR, a container) is an implementation detail. An architect who has mastered the core transformation logic in Python can easily adapt to any of these execution environments. This is true cloud-agnostic skill.
+        </div>
+
+        <h2>2. Core Python Concepts for Data Munging</h2>
+        <p>This task will use fundamental Python libraries for file I/O and data handling.</p>
+        <ul>
+            <li><strong>File Handling:</strong> Using `with open(...) as f:` is the standard, safe way to read from and write to files. It ensures the file is automatically closed even if errors occur.</li>
+            <li><strong>The `json` Library:</strong> A built-in Python library for encoding and decoding JSON data. We will use `json.loads()` (load string) to parse each line of our log file from a JSON string into a Python dictionary.</li>
+            <li><strong>The `csv` Library:</strong> A built-in library that simplifies reading and writing CSV files. We will use `csv.DictWriter` to easily write a list of dictionaries to a CSV file, automatically handling the header row.</li>
+            <li><strong>The `datetime` Library:</strong> For handling and formatting timestamps. We'll use it to convert a raw Unix timestamp into a human-readable string.</li>
+        </ul>
+
+        <div class="task">
+            <h2>Hands-On Task: Build a JSON-to-CSV Transformer</h2>
+            <p>Your mission is to write a Python script in your KodeKloud environment that transforms a raw log file into a clean CSV.</p>
+            
+            <h3>Step 1: Create the Raw Data File</h3>
+            <p>In your KodeKloud terminal, create a file named `clickstream.jsonlog` and paste the following lines into it. Each line is a separate JSON object.</p>
+            <pre><code>{"product_id": 235, "user_id": "user_4", "event_type": "view", "timestamp": 1655472301}
+{"product_id": 112, "user_id": "user_2", "event_type": "add_to_cart", "timestamp": 1655472305, "quantity": 1}
+{"product_id": 235, "user_id": "user_4", "event_type": "add_to_cart", "timestamp": 1655472310, "quantity": 2}
+{"product_id": 560, "user_id": "user_7", "event_type": "view", "timestamp": 1655472315}
+{"product_id": 112, "user_id": "user_2", "event_type": "view", "timestamp": 1655472320}
+</code></pre>
+
+            <h3>Step 2: Write the Transformation Script</h3>
+            <p>Now, create a Python script named `transformer.py`. This script must perform the following actions:</p>
+            <ol>
+                <li>Read the `clickstream.jsonlog` file line by line.</li>
+                <li>For each line, parse the JSON string into a Python dictionary.</li>
+                <li>Perform a transformation: Add a new key to the dictionary called `event_time` which is the `timestamp` converted to a human-readable ISO 8601 format string.</li>
+                <li>Collect all these transformed dictionaries into a list.</li>
+                <li>Write this list of dictionaries to a new file called `processed_clicks.csv` using the `csv.DictWriter`, ensuring it has a proper header row.</li>
+            </ol>
+
+            <div class="code-block-header">transformer.py (Your blueprint)</div>
+            <pre><code>import json
+import csv
+from datetime import datetime
+
+INPUT_FILE = "clickstream.jsonlog"
+OUTPUT_FILE = "processed_clicks.csv"
+
+def transform_data():
+    """Reads raw JSON logs, transforms them, and writes to a clean CSV."""
+    
+    transformed_records = []
+    
+    print(f"Reading data from {INPUT_FILE}...")
+    with open(INPUT_FILE, 'r') as f:
+        for line in f:
+            try:
+                # Load the JSON string from the line into a Python dictionary
+                record = json.loads(line.strip())
+                
+                # --- This is our transformation logic ---
+                # Convert Unix timestamp to a human-readable ISO 8601 format
+                record['event_time'] = datetime.utcfromtimestamp(record['timestamp']).isoformat() + "Z"
+                
+                # For consistency, ensure 'quantity' exists in all records
+                if 'quantity' not in record:
+                    record['quantity'] = None # or 0, depending on business logic
+
+                transformed_records.append(record)
+
+            except json.JSONDecodeError:
+                print(f"Skipping malformed line: {line.strip()}")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+    print(f"Successfully transformed {len(transformed_records)} records.")
+
+    if not transformed_records:
+        print("No data to write.")
+        return
+
+    print(f"Writing data to {OUTPUT_FILE}...")
+    # Define the headers for our CSV file.
+    # We must ensure all possible keys are included.
+    headers = ['event_time', 'timestamp', 'user_id', 'event_type', 'product_id', 'quantity']
+    
+    with open(OUTPUT_FILE, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        
+        # Write the header row
+        writer.writeheader()
+        
+        # Write all our transformed dictionary records
+        writer.writerows(transformed_records)
+
+    print("--- Transformation complete! ---")
+
+
+if __name__ == "__main__":
+    transform_data()
+
+</code></pre>
+
+            <h3>Step 3: Execute and Verify</h3>
+            <ol>
+                <li>Run the script: <code>python transformer.py</code></li>
+                <li>Verify the output: A new file, `processed_clicks.csv`, should be created.</li>
+                <li>Inspect the CSV file: <code>cat processed_clicks.csv</code>. It should be a clean, comma-separated file with a header and the new `event_time` column.</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
