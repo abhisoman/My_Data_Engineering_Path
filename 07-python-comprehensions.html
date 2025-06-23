@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Sharpening Session #1: Comprehensions</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 2rem 3rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #dddfe2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #000;
+            font-weight: 600;
+            margin: 0;
+        }
+        h1 span {
+            font-size: 1.1rem;
+            color: #606770;
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        h2 {
+            font-size: 1.75rem;
+            color: #28a745; /* Green for Python Path */
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        p, li {
+            font-size: 1rem;
+            color: #333;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        .tip {
+            border-left: 4px solid #f0b90c;
+            background-color: #fffbeb;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .tip strong {
+            color: #d99c0a;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .task {
+            border-left: 4px solid #28a745;
+            background-color: #e2f5e7;
+            padding: 1rem 1.5rem;
+            margin-top: 2rem;
+            border-radius: 8px;
+        }
+        .code-block-header {
+            background-color: #3e4451;
+            color: #abb2bf;
+            padding: 0.5rem 1.5rem;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.9em;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Python Sharpening Session #1
+                <span>Productive Downtime: Mastering Comprehensions</span>
+            </h1>
+        </header>
+
+        <h2>Objective: Write Cleaner, Faster Data Manipulation Code</h2>
+        <p>When processing data, we often need to create new lists or dictionaries based on existing ones. Comprehensions are the modern, "Pythonic" way to do this. They are more concise and often faster than traditional `for` loops.</p>
+
+        <div class="tip">
+            <strong>Guru's Insight: Declarative vs. Imperative</strong>
+            <p>A `for` loop is **imperative**: you tell Python *how* to do something step-by-step ("create an empty list, loop, append to the list..."). A comprehension is **declarative**: you tell Python *what* you want ("give me a list of these things from this source"). Architects think declaratively. It's the same mindset behind Terraform.</p>
+        </div>
+
+        <h2>Part 1: List Comprehensions</h2>
+        <p>Let's say we have a list of numbers and we want a new list with the square of each number.</p>
+
+        <h3>The Old Way (Standard `for` loop)</h3>
+        <pre><code>numbers = [1, 2, 3, 4, 5]
+squares = []
+for n in numbers:
+    squares.append(n * n)
+# Result: squares is [1, 4, 9, 16, 25]
+</code></pre>
+
+        <h3>The New Way (List Comprehension)</h3>
+        <p>The syntax is `[output_expression for item in iterable]`. </p>
+        <pre><code>numbers = [1, 2, 3, 4, 5]
+squares = [n * n for n in numbers]
+# Result: squares is [1, 4, 9, 16, 25]
+</code></pre>
+
+        <h3>Adding a Condition</h3>
+        <p>Now let's only get the squares of the even numbers. The syntax is `[output_expression for item in iterable if condition]`.</p>
+        <pre><code>numbers = [1, 2, 3, 4, 5]
+even_squares = [n * n for n in numbers if n % 2 == 0]
+# Result: even_squares is [4, 16]
+</code></pre>
+        
+        <h2>Part 2: Dictionary Comprehensions</h2>
+        <p>The same logic applies to creating dictionaries. Let's say we want to create a dictionary mapping each number to its square.</p>
+
+        <h3>The Old Way (Standard `for` loop)</h3>
+        <pre><code>numbers = [1, 2, 3, 4, 5]
+number_map = {}
+for n in numbers:
+    number_map[n] = n * n
+# Result: number_map is {1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
+</code></pre>
+
+        <h3>The New Way (Dictionary Comprehension)</h3>
+        <p>The syntax is `{key_expression: value_expression for item in iterable}`.</p>
+        <pre><code>numbers = [1, 2, 3, 4, 5]
+number_map = {n: n * n for n in numbers}
+# Result: number_map is {1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
+</code></pre>
+        
+        <div class="task">
+            <h2>Hands-On Task: Process SynthMart Product Data</h2>
+            <p>Given the list of product dictionaries below, complete two tasks in a Python script:</p>
+            <ol>
+                <li>Use a **list comprehension** to create a new list called `top_rated_products` that contains only the *names* of products with a rating of 4.5 or higher.</li>
+                <li>Use a **dictionary comprehension** to create a new dictionary called `product_prices` that maps each product's `product_id` to its `price`.</li>
+            </ol>
+            <p>This is exactly the kind of data transformation you'd perform in a Spark or Glue job.</p>
+            <div class="code-block-header">Sample Data (Copy this into your script)</div>
+            <pre><code>products = [
+    {"product_id": "p001", "name": "Quantum Laptop", "price": 1200.00, "rating": 4.7},
+    {"product_id": "p002", "name": "Nebula Smartphone", "price": 800.00, "rating": 4.5},
+    {"product_id": "p003", "name": "Fusion Tablet", "price": 650.00, "rating": 4.2},
+    {"product_id": "p004", "name": "Graviton Mouse", "price": 50.00, "rating": 4.8},
+    {"product_id": "p005", "name": "Photon Keyboard", "price": 120.00, "rating": 4.4}
+]
+</code></pre>
+            <p>Write the script and show me your two comprehensions and the resulting `top_rated_products` list and `product_prices` dictionary.</p>
+        </div>
+    </div>
+</body>
+</html>
