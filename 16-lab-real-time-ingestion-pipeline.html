@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>120-Minute Lab: The Real-Time Ingestion Pipeline</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #fff;
+            color: #1c1e21;
+            margin: 0;
+            padding: 1rem 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #dddfe2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #000;
+            font-weight: 600;
+            margin: 0;
+        }
+        h1 span {
+            font-size: 1.1rem;
+            color: #606770;
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        h2 {
+            font-size: 2rem;
+            color: #FF9900; /* AWS Orange */
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #232F3E; /* AWS Dark Blue */
+            margin-top: 2rem;
+        }
+        p, li {
+            font-size: 1.05rem;
+            color: #333;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        .tip {
+            border-left: 4px solid #f0b90c;
+            background-color: #fffbeb;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .tip strong {
+            color: #d9820a;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .task {
+            border: 2px solid #FF9900;
+            background-color: #fff8f0;
+            padding: 1rem 1.5rem;
+            margin-top: 2rem;
+            border-radius: 8px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>120-Minute Lab: The Real-Time Ingestion Pipeline
+                <span>Kinesis Data Streams & Kinesis Data Firehose</span>
+            </h1>
+        </header>
+
+        <h2>1. The Hawk-Eye View & Mission</h2>
+        <p><strong>The Business Problem:</strong> SynthMart needs to capture every user click on their website in real-time and store this data reliably in their data lake for analysis.</p>
+        <p><strong>Our Mission:</strong> In this lab, we will build the end-to-end pipeline to solve this. Data will flow from a producer script, through a Kinesis stream, be batched and delivered by Firehose, and land in S3.</p>
+        <p><strong>Visualization:</strong></p>
+        <pre>
+[Python Producer] -> [Kinesis Data Stream] -> [Kinesis Data Firehose] -> [S3 Data Lake]
+ (Our Script)         (The Ingestion Pipe)     (The Delivery Conveyor)    (The Storage)
+</pre>
+
+        <div class="tip">
+            <strong>Architect's Insight:</strong> We are building a classic, decoupled streaming architecture. The Data Stream absorbs the high-frequency writes. The Firehose handles the less urgent, batch-oriented delivery to durable storage. This pattern is highly scalable and resilient.
+        </div>
+
+        <h2>2. Step 1: Provision the Foundation (Terraform)</h2>
+        <p>We'll create the S3 buckets and the Kinesis Data Stream using Terraform for speed and repeatability.</p>
+        
+        <h3>Action: Create Terraform Files</h3>
+        <p>In your KodeKloud environment, create a directory and add the following two files.</p>
+
+        <div class="code-block-header">main.tf</div>
+        <pre><code>terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1" # Or any region available in the playground
+}
+
+# --- S3 Buckets ---
+resource "aws_s3_bucket" "landing_zone" {
+  # Use a random suffix to ensure the bucket name is globally unique
+  bucket = "aida-dev-landing-zone-${random_id.suffix.hex}"
+}
+
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
+# --- Kinesis Data Stream ---
+resource "aws_kinesis_stream" "clickstream_stream" {
+  name        = "aida-dev-clickstream"
+  shard_count = 1
+}
+
+# --- Outputs ---
+output "s3_bucket_name" {
+  value = aws_s3_bucket.landing_zone.bucket
+}
+output "kinesis_stream_name" {
+  value = aws_kinesis_stream.clickstream_stream.name
+}
+</code></pre>
+
+        <h3>Action: Deploy with Terraform</h3>
+        <ol>
+            <li>Run `terraform init`.</li>
+            <li>Run `terraform apply -auto-approve`. We use `-auto-approve` to be fast in the lab environment.</li>
+            <li>Note the `s3_bucket_name` and `kinesis_stream_name` from the output. You will need them.</li>
+        </ol>
+        
+        <h2>3. Step 2: Create the Delivery Stream (AWS Console)</h2>
+        <p>Now we will create the Firehose delivery stream manually in the console. This is often faster in lab environments and is excellent hands-on practice.</p>
+
+        <h3>Action: Configure Firehose</h3>
+        <ol>
+            <li>Go to the **Amazon Kinesis** service in the AWS Console.</li>
+            <li>On the left menu, select **Delivery streams**.</li>
+            <li>Click **Create delivery stream**.</li>
+            <li><strong>Source:</strong> Select `Amazon Kinesis Data Streams`.</li>
+            <li><strong>Destination:</strong> Select `Amazon S3`.</li>
+            <li>Under "Source settings", for "Kinesis data stream", choose the `aida-dev-clickstream` stream you just created.</li>
+            <li>Under "Destination settings", for "S3 bucket", browse and select the `aida-dev-landing-zone-...` bucket created by Terraform.</li>
+            <li>Scroll to the bottom and click **Create delivery stream**.</li>
+        </ol>
+
+        <h2>4. Step 3: Start the Producer (Python)</h2>
+        <p>Finally, we run the Python script to generate data and send it to our Kinesis Data Stream.</p>
+        
+        <h3>Action: Create and Run the Producer Script</h3>
+        <p>Create a file named `producer.py`.</p>
+        <div class="code-block-header">producer.py</div>
+        <pre><code>import boto3
+import json
+import random
+import time
+
+# --- Configuration ---
+# Update these with the outputs from your Terraform apply
+AWS_REGION = "us-east-1" 
+STREAM_NAME = "aida-dev-clickstream" 
+# ---
+
+kinesis_client = boto3.client("kinesis", region_name=AWS_REGION)
+
+print(f"Starting producer for stream: {STREAM_NAME}...")
+while True:
+    event = {
+        'product_id': random.randint(100, 999),
+        'user_id': f"user_{random.randint(1, 10)}",
+        'event_type': random.choice(['click', 'view', 'add_to_cart']),
+        'timestamp': int(time.time())
+    }
+    partition_key = event['user_id']
+    data = json.dumps(event)
+    
+    print(f"Sending record: {data}")
+    try:
+        kinesis_client.put_record(
+            StreamName=STREAM_NAME,
+            Data=data.encode("utf-8"),
+            PartitionKey=partition_key
+        )
+    except Exception as e:
+        print(f"Error sending record: {e}")
+        
+    time.sleep(1)
+</code></pre>
+        <p>Run the script from your terminal: `python producer.py`</p>
+
+        <div class="task">
+            <h2>Execution & Verification</h2>
+            <p><strong>Your Goal for this Lab Session:</strong></p>
+            <p>After running the producer script for a few minutes, navigate to your S3 bucket in the AWS console. You should see a new folder structure created automatically by Firehose (e.g., `2025/06/17/...`). Inside, you will find files containing the batched JSON data from your script.</p>
+            <p><strong>This is the proof that your end-to-end pipeline is working.</strong></p>
+        </div>
+    </div>
+</body>
+</html>
