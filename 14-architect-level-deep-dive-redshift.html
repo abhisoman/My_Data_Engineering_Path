@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architect-Level Deep Dive: Amazon Redshift</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #fff;
+            color: #1c1e21;
+            margin: 0;
+            padding: 1rem 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #dddfe2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #000;
+            font-weight: 600;
+            margin: 0;
+        }
+        h1 span {
+            font-size: 1.1rem;
+            color: #606770;
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        h2 {
+            font-size: 2.2rem;
+            color: #d62976; /* Architect Purple */
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        h3 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: #232F3E; /* AWS Dark Blue */
+            margin-top: 2rem;
+        }
+        p, li {
+            font-size: 1.05rem;
+            color: #333;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        .deep-dive-section {
+            border-left: 4px solid #d62976;
+            background-color: #fafafa;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+        .deep-dive-section h4 {
+            font-size: 1.25rem;
+            margin-top: 0;
+            color: #232F3E;
+        }
+        .deep-dive-section strong {
+            color: #c5221f;
+        }
+        .well-architected {
+            border: 1px solid #e2f5e7;
+            background-color: #f8fdf9;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+        }
+        .well-architected strong {
+            color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Architect-Level Deep Dive
+                <span>Amazon Redshift</span>
+            </h1>
+        </header>
+
+        <h2>1. Redshift Architecture: The "Engine Room"</h2>
+        <p>Your Oracle background with RAC is a direct parallel here. Redshift uses a **Leader Node / Compute Node** architecture.</p>
+        <p><strong>Visualization: Redshift Cluster Architecture</strong></p>
+        <pre>
+[ SQL Client (BI Tool) ] -> [ Leader Node ] -> sends compiled code -> [ Compute Nodes ]
+                                    |                                     /      |      \
+                                    |                                  /       |       \
+                                    |                           +---------+---------+---------+
+                                    +-- Aggregates results --+  | Slice 0 | Slice 1 | Slice 2 | (Node 1)
+                                                                | Slice 3 | Slice 4 | Slice 5 | (Node 2)
+                                                                +---------+---------+---------+
+        </pre>
+        <div class="deep-dive-section">
+            <h4>The Leader Node</h4>
+            <p>This is the "brain" of the cluster. It does **NOT** store your data. Its jobs are to receive queries, parse and optimize them, compile the plan, distribute it to Compute Nodes, and aggregate the final results.</p>
+            <h4>The Compute Nodes</h4>
+            <p>These are the "muscle." They store your data and execute the query plan in parallel. Each compute node is partitioned into **Slices**.</p>
+        </div>
+
+        <h2>2. Storage & Performance Tuning</h2>
+        <p>This is where an architect's decisions have the biggest impact. How data is stored and distributed determines query performance.</p>
+        <div class="deep-dive-section">
+            <h4>Core Concept: Columnar Storage</h4>
+            <p>Unlike Oracle (a row-store database), Redshift is a **columnar** database. It stores all values for a single column together on disk. This is incredibly efficient for analytics because a query like `SELECT SUM(amount) FROM sales` only needs to read the `amount` column, dramatically reducing I/O.</p>
+            
+            <h4>The Architect's Decision Point: Distribution Style (`DISTSTYLE`)</h4>
+            <p>This controls how table rows are distributed across the compute nodes. Choosing the right style is the **most important performance decision you will make.**</p>
+            <ul>
+                <li><code>DISTSTYLE KEY (distkey)</code>: You choose a column (e.g., `customer_id`). All rows with the same `customer_id` are guaranteed to be on the same node slice. **This is critical for join performance.**</li>
+                <li><code>DISTSTYLE ALL</code>: A full copy of the table is stored on every node. Use **only for small, slow-changing dimension tables** (e.g., `dim_date`).</li>
+                <li><code>DISTSTYLE EVEN</code>: (Default for many cases) Rows are distributed in a round-robin fashion. Use for tables that don't participate in joins.</li>
+            </ul>
+
+            <h4>The Architect's Decision Point: Sort Keys (`SORTKEY`)</h4>
+            <p>This is like a super-powered `INDEX`. It determines the physical order of data on disk. When you query with a `WHERE` clause on the sort key (e.g., `WHERE sale_date > '2025-01-01'`), Redshift can skip massive blocks of data.</p>
+        </div>
+
+        <h2>3. Operations: Backup, Scaling, and WLM</h2>
+        <div class="deep-dive-section">
+            <h4>Backup and Recovery</h4>
+            <p>Redshift automatically takes continuous, incremental **snapshots** of your cluster and stores them in S3. You configure the retention period. For disaster recovery, you can configure cross-region snapshot replication.</p>
+
+            <h4>Scaling & Resiliency</h4>
+            <ul>
+                <li><strong>Elastic Resize:</strong> Permanently add or remove nodes from your cluster to scale for more storage or performance. Incurs a short downtime.</li>
+                <li><strong>Concurrency Scaling:</strong> When your cluster gets busy, Redshift can automatically spin up **temporary, additional clusters** to handle the extra read query load. You pay per second. This prevents your dashboards from slowing down during heavy ETL.</li>
+            </ul>
+            
+            <h4>Workload Management (WLM)</h4>
+            <p>This is the cloud equivalent of Oracle's Resource Manager. It allows you to define **query queues** to manage performance. For SynthMart, you would create a `high_priority_queue` for CEO dashboards and a `low_priority_queue` for long-running ETL jobs.</p>
+        </div>
+    </div>
+</body>
+</html>
