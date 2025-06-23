@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Dive #1 [v3]: The Data Lake Foundation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #fff;
+            color: #1c1e21;
+            margin: 0;
+            padding: 1rem 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #dddfe2;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #000;
+            font-weight: 600;
+            margin: 0;
+        }
+        h1 span {
+            font-size: 1.1rem;
+            color: #606770;
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        h2 {
+            font-size: 2rem;
+            color: #FF9900; /* AWS Orange */
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #232F3E; /* AWS Dark Blue */
+            margin-top: 2rem;
+        }
+        p, li {
+            font-size: 1.05rem;
+            color: #333;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        .multi-cloud-note {
+            border: 1px solid #cce0ff;
+            background-color: #f0f8ff;
+            padding: 0.5rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+        .multi-cloud-note strong {
+            color: #0056b3;
+        }
+        .deep-dive-section {
+            border: 1px solid #e7e7e7;
+            background-color: #fafafa;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+        }
+        .deep-dive-section h4 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            color: #232F3E;
+        }
+        .deep-dive-section strong {
+            color: #c5221f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Dive #1 [v3]: The Data Lake Foundation
+                <span>Amazon S3 & AWS Glue Data Catalog</span>
+            </h1>
+        </header>
+
+        <h2>1. The Hawk-Eye View</h2>
+        <p><strong>The Business Problem:</strong> SynthMart has valuable data trapped in different systems. They have no central, reliable, or scalable place to store it for analysis. They have a "data swamp," not a "data lake."</p>
+        <p><strong>The Architectural Purpose:</strong> We build the foundation with two inseparable services: S3 as the **storage layer** and the Glue Data Catalog as the **metadata repository**.</p>
+        
+        <hr>
+
+        <h2>2. In-Depth: Amazon S3</h2>
+        <p>S3 is the object storage foundation of our data lake.</p>
+        <div class="multi-cloud-note">
+            <strong>Multi-Cloud Counterparts:</strong> GCP: <code>Google Cloud Storage (GCS)</code>, Azure: <code>Azure Blob Storage</code>
+        </div>
+        
+        <h3>Exam-Critical Detail: S3 Storage Classes & Lifecycle Policies</h3>
+
+        <div class="deep-dive-section">
+            <h4>The Core Concept</h4>
+            <p>Not all data is equal. Some data is accessed constantly ("hot"), while older data is rarely touched ("cold"). S3 Storage Classes let you pay the right price for the right access pattern. <strong>Lifecycle Policies</strong> are the rules that automatically move data between these classes based on its age.</p>
+            
+            <h4>The Real-World Scenario (SynthMart)</h4>
+            <p>SynthMart's clickstream data from Kinesis lands in our S3 landing zone daily. This data is "hot" for the first 30 days, as it's used for daily sales dashboards. After 30 days, it's only used for monthly reporting, so it becomes "warm." After 90 days, it's rarely used but must be kept for annual analysis. After 1 year, it can be deleted. The lifecycle policy we design will automate this entire process.</p>
+            
+            <h4>A Junior Engineer's Daily Task</h4>
+            <p>A junior engineer might be tasked to monitor the S3 cost reports in AWS Cost Explorer to verify that the lifecycle policies are working correctly and that data is transitioning to cheaper storage tiers as expected. They might also write a small script to inventory objects that failed to transition.</p>
+
+            <h4>The Architect's Decision Point</h4>
+            <p><strong>You decide the strategy.</strong> Based on business requirements, you'll define the policy: `Standard` for 30 days -> `Standard-IA` for another 60 days -> `Glacier Flexible Retrieval` for the rest of the year -> `Expiration` after 365 days. This decision directly impacts performance and cost.</p>
+        </div>
+
+        <hr>
+
+        <h2>3. In-Depth: AWS Glue Data Catalog</h2>
+        <p>The Data Catalog is the managed, centralized metadata repository that makes our data lake usable.</p>
+        <div class="multi-cloud-note">
+            <strong>Multi-Cloud Counterparts:</strong> GCP: <code>Google Cloud Data Catalog</code>, Azure: <code>Microsoft Purview</code>
+        </div>
+
+        <h3>Exam-Critical Detail: Partitioning</h3>
+        <div class="deep-dive-section">
+            <h4>The Core Concept</h4>
+            <p>Partitioning is the most important technique for optimizing performance in a data lake. It involves structuring your S3 object keys into a hierarchy that includes key-value pairs. Instead of a flat list of files, your data is organized like `s3://.../sales/year=2025/month=06/day=16/file.parquet`. When you query this data, you can specify a `WHERE` clause like `WHERE year=2025 and month=06`, and the query engine (like Athena) will completely ignore all other folders. This is called **partition pruning**.</p>
+
+            <h4>The Real-World Scenario (SynthMart)</h4>
+            <p>The analytics team constantly asks, "How did we do last week?" Without partitions, a query to answer this would scan the entire multi-terabyte sales dataset. With partitioning by date, the query only scans the 7 specific folders corresponding to last week's dates. The query goes from hours to seconds, and from hundreds of dollars to pennies.</p>
+
+            <h4>A Junior Engineer's Daily Task</h4>
+            <p>An ETL job might be misconfigured and write data to the wrong partition folder. A junior engineer would be tasked to write a "data reconciliation" script that finds these misplaced files and moves them to the correct partition path in S3, then runs a command to repair the table metadata in Glue (`MSCK REPAIR TABLE`).</p>
+
+            <h4>The Architect's Decision Point</h4>
+            <p><strong>You design the partition scheme.</strong> Should we partition by date? By product category? By customer region? The answer depends entirely on the most common query patterns. You analyze the business needs and define a partition strategy that provides the best balance of performance and cost.</p>
+        </div>
+        
+        <h3>Exam-Critical Detail: Schema Evolution</h3>
+        <div class="deep-dive-section">
+            <h4>The Core Concept</h4>
+            <p>Source systems change. A new column might be added to a database table or a new field to a JSON event. Schema evolution is how the data lake handles these changes without breaking. The Glue Crawler is central to this.</p>
+
+            <h4>The Real-World Scenario (SynthMart)</h4>
+            <p>The SynthMart app development team adds a `discount_code` field to the clickstream events. The next time our Glue Crawler runs, it detects this new field in the latest S3 files. Based on its configuration, it can automatically add `discount_code` as a new column to our `clickstream` table definition in the Glue Data Catalog. Downstream ETL jobs can now access this new field without any manual intervention.</p>
+            
+            <h4>A Junior Engineer's Daily Task</h4>
+            <p>After a new field is added, a junior engineer might be tasked to run a "backfill" ETL job. This job would read all the old data (where the `discount_code` is null) and the new data, creating a new, unified dataset in the processed zone so that all records have a consistent schema for analysts.</p>
+
+            <h4>The Architect's Decision Point</h4>
+            <p><strong>You define the evolution policy.</strong> How should the crawler behave? `ADD_NEW_COLUMNS`? `IGNORE_CHANGE`? `LOG` the change but do nothing? You also design the downstream exception handling. What should happen if a data type changes (e.g., a field goes from integer to string)? Your design must ensure the data platform is resilient to these changes.</p>
+        </div>
+    </div>
+</body>
+</html>
