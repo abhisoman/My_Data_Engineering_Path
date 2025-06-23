@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architect's Learning Command Center</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.8rem;
+            color: #000;
+            font-weight: 700;
+            margin: 0;
+        }
+        h1 span {
+            font-size: 1.2rem;
+            color: #6c757d;
+            display: block;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+        h2 {
+            font-size: 2rem;
+            color: #FF9900;
+            border-bottom: 2px solid #f0f2f5;
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        .link-section {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .link-section h3 {
+            font-size: 1.5rem;
+            color: #232F3E;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+        .link-section ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .link-section li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .link-section li:last-child {
+            border-bottom: none;
+        }
+        .link-section a {
+            text-decoration: none;
+            color: #0056b3;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: color 0.2s ease-in-out;
+        }
+        .link-section a:hover {
+            color: #d62976;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Architect's Learning Command Center
+                <span>Your Central Hub for All Learning Modules</span>
+            </h1>
+        </header>
+
+        <h2>DEA-C01 Theory Blitz: Deep Dives</h2>
+        <div class="link-section">
+            <h3>Domain 1: Data Ingestion & Transformation</h3>
+            <ul>
+                <li><a href="13-theory-blitz-streaming-ingestion.html" target="_blank">Module 1: Deep Dive into Streaming Ingestion (Kinesis Family)</a></li>
+            </ul>
+            <h3>Domain 2: Data Store Management</h3>
+            <ul>
+                <li><a href="11-deep-dive-s3-glue-catalog-v3.html" target="_blank">Module 2a: The Data Lake Foundation (S3 & Glue Catalog)</a></li>
+                <li><a href="14-architect-level-deep-dive-redshift.html" target="_blank">Module 2b: Architect-Level Deep Dive on Amazon Redshift</a></li>
+                <li><a href="15-theory-blitz-dynamodb-cloudwatch.html" target="_blank">Module 2c: Deep Dive into Amazon DynamoDB</a></li>
+            </ul>
+            <h3>Domain 3: Data Operations and Support</h3>
+             <ul>
+                <li><a href="15-theory-blitz-dynamodb-cloudwatch.html" target="_blank">Module 3a: Deep Dive into Amazon CloudWatch</a></li>
+            </ul>
+        </div>
+        
+        <h2>Hands-On Labs & Execution Guides</h2>
+        <div class="link-section">
+             <h3>Core Pipelines</h3>
+             <ul>
+                <li><a href="16-lab-real-time-ingestion-pipeline.html" target="_blank">Lab 1: The Real-Time Ingestion Pipeline (Kinesis -> Firehose -> S3)</a></li>
+            </ul>
+        </div>
+
+        <h2>Foundational Crash Courses</h2>
+        <div class="link-section">
+            <h3>Python</h3>
+            <ul>
+                 <li><a href="08-python-crash-course.html" target="_blank">Field Guide: Python Crash Course for Data Architects</a></li>
+                 <li><a href="07-python-comprehensions.html" target="_blank">Sharpening Session: Mastering Comprehensions</a></li>
+                 <li><a href="12-python-data-transformation.html" target="_blank">Sharpening Session: JSON-to-CSV Transformation</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
