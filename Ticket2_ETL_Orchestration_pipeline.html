@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task #2: ETL Orchestration</title>
+    <style>
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fff; color: #1c1e21; margin: 0; padding: 1rem 2rem; line-height: 1.6;}
+        .container {max-width: 1000px; margin: 0 auto;}
+        header {text-align: center; border-bottom: 1px solid #dddfe2; padding-bottom: 1.5rem; margin-bottom: 2rem;}
+        h1 {font-size: 2.5rem; color: #000; font-weight: 600; margin: 0;}
+        h1 span {font-size: 1.1rem; color: #606770; display: block; margin-top: 0.5rem; font-weight: 400;}
+        h2 {font-size: 2rem; color: #1877f2; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        p, li {font-size: 1.05rem; color: #333;}
+        code {font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; color: #d63384;}
+        .task-box {border: 2px solid #1877f2; background-color: #f0f8ff; padding: 1rem 1.5rem; margin-top: 2rem; border-radius: 8px;}
+        .task-box h3 {margin-top:0;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hands-On Task #2: Data Engineer
+                <span>TICKET-002: ETL Orchestration & Automation</span>
+            </h1>
+        </header>
+
+        <h2>The Scenario</h2>
+        <p>The raw clickstream data is landing in S3, but it's not yet optimized for analytics. We need to create an automated workflow that transforms this raw JSON data into columnar Parquet format and sets up proactive monitoring.</p>
+        
+        <div class="task-box">
+            <h3>Your Mission</h3>
+            <p>Using the AWS Console, build a simple, resilient ETL workflow.</p>
+            <ol>
+                <li><strong>Author a Glue ETL Job:</strong>
+                    <ul>
+                        <li>Go to AWS Glue Studio.</li>
+                        <li>Create a simple visual ETL job. The source is your S3 landing zone.</li>
+                        <li>Add a transformation step to drop one of the columns (e.g., `timestamp`, since we now have `event_time`).</li>
+                        <li>The target is a new "processed" prefix in your S3 bucket, and the format must be **Apache Parquet**.</li>
+                        <li>Create an IAM Role for Glue that has permissions to read and write from your S3 bucket.</li>
+                    </ul>
+                </li>
+                <li><strong>Create a CloudWatch Alarm:</strong>
+                    <ul>
+                        <li>Go to CloudWatch.</li>
+                        <li>Create a new alarm that monitors the `glue.driver.aggregate.failedStages` metric for your Glue job.</li>
+                        <li>Set the threshold to be `>= 1` for 1 datapoint.</li>
+                        <li>Configure the alarm to send a notification to a new **SNS Topic** when it enters the `ALARM` state. Subscribe your email to this topic to receive the alert.</li>
+                    </ul>
+                </li>
+                <li><strong>(Advanced) Orchestrate with Step Functions:</strong>
+                    <ul>
+                        <li>Go to AWS Step Functions.</li>
+                        <li>Create a simple state machine that has one `Task` state: to start your Glue ETL job. This demonstrates the first step in building a larger workflow.</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>Acceptance Criteria</h3>
+            <ul>
+                <li>The Glue job runs successfully and creates Parquet files in the "processed" S3 prefix.</li>
+                <li>The CloudWatch Alarm is configured correctly.</li>
+                <li>(Advanced) You can trigger your Glue job from the Step Functions state machine.</li>
+            </ul>
+
+            <h3>Core Concepts Cemented</h3>
+            <ul>
+                <li>Authoring AWS Glue ETL jobs.</li>
+                <li>Understanding the benefits of columnar formats (Parquet).</li>
+                <li>Proactive monitoring and alerting with CloudWatch and SNS.</li>
+                <li>Basic serverless orchestration with Step Functions.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
