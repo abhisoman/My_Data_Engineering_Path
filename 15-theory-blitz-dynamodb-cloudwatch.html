@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEA-C01 Theory Blitz #3: Orchestration & Data Quality</title>
+    <title>DEA-C01 Theory Blitz #2: DynamoDB & CloudWatch</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -67,24 +67,6 @@
             font-size: 0.9em;
             color: #d63384;
         }
-        pre {
-            background-color: #282c34;
-            color: #abb2bf;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-size: 0.9em;
-        }
-        .multi-cloud-note {
-            border: 1px solid #cce0ff;
-            background-color: #f0f8ff;
-            padding: 0.5rem 1.5rem;
-            margin: 1rem 0;
-            border-radius: 8px;
-        }
-        .multi-cloud-note strong {
-            color: #0056b3;
-        }
         .deep-dive-section {
             border-left: 4px solid #FF9900;
             background-color: #fafafa;
@@ -125,82 +107,74 @@
 <body>
     <div class="container">
         <header>
-            <h1>DEA-C01 Theory Blitz: Module 4
-                <span>Deep Dive: Orchestration & Data Quality</span>
+            <h1>DEA-C01 Theory Blitz: Module 3
+                <span>Deep Dive: DynamoDB & CloudWatch</span>
             </h1>
         </header>
 
-        <h2 class="task-statement">Domain 3: Data Operations and Support</h2>
-
-        <h3>Key Service: AWS Step Functions (Orchestration)</h3>
-        <p><strong>Hawk-Eye View:</strong> Individual jobs (like ingestion or transformation) are just steps. A data pipeline is a sequence of these steps that must be managed. Step Functions is a serverless orchestrator that allows you to build and visualize these workflows, manage dependencies, and handle errors.</p>
-        <div class="multi-cloud-note">
-            <strong>Multi-Cloud Counterparts:</strong> GCP: <code>Google Cloud Workflows</code>, Azure: <code>Azure Logic Apps</code>.
-        </div>
-        <p><strong>Visualization: A Basic ETL Workflow for SynthMart</strong></p>
-        <pre>
-[START]
-   |
-   V
-[ Run Glue Crawler to Catalog New Data ]
-   |
-   V
-[ Run Glue ETL Job to Transform Data ]
-   |
-   V
-[ CHOICE: Did Glue Job Succeed? ] --(Yes)--> [ Run Redshift COPY Command ] -> [ SUCCESS ]
-   |
- (No/Fail)
-   |
-   V
-[ Send SNS "Failure" Alert ] -> [ FAIL ]
-        </pre>
+        <h2 class="task-statement">Domain 2 (Conclusion): Data Store Management</h2>
+        
+        <h3>Key Service: Amazon DynamoDB</h3>
+        <p><strong>Hawk-Eye View:</strong> DynamoDB is a fully managed NoSQL key-value and document database. Its entire reason for existence is providing consistent, **single-digit millisecond latency at any scale**. It's built for Online Transaction Processing (OLTP) workloads that demand extreme speed and scalability.</p>
+        
         <div class="deep-dive-section">
-            <h4>The Core Concept: State Machines</h4>
-            <p>You define your workflow as a **State Machine**, which is essentially a flowchart. Each step in the flowchart is a **State**. Key state types you must know for the exam:</p>
-            <ul>
-                <li><code>Task</code>: The most common state. It represents a single unit of work, like "run a Lambda function" or "start a Glue job."</li>
-                <li><code>Choice</code>: Acts like an `if-then-else` statement. It directs the workflow down different paths based on the output of the previous step.</li>
-                <li><code>Parallel</code>: Allows you to run multiple branches of your workflow at the same time.</li>
-                <li><code>Wait</code>: Pauses the workflow for a specified amount of time.</li>
-            </ul>
-            <p><strong>The Real-World Scenario (SynthMart):</strong> Our daily pipeline must be resilient. We build a Step Functions workflow. If the Glue ETL job fails, instead of the whole pipeline stopping, the `Choice` state routes the workflow to a `Task` state that sends an alert to the on-call engineer's Slack channel via SNS and Lambda.</p>
+            <h4>Exam-Critical Detail: Partition Keys and Sort Keys</h4>
+            <p><strong>The Core Concept:</strong> This is the most critical DynamoDB concept. Your table's primary key determines how data is stored and accessed.
+                <ul>
+                    <li><strong>Partition Key (PK):</strong> This key is hashed to determine the physical partition where the data is stored. Your access pattern **must** include the PK. A good PK has high cardinality (many unique values) to distribute data evenly.</li>
+                    <li><strong>Sort Key (SK):</strong> (Optional) When used with a PK, this is called a **composite primary key**. All items with the same PK are stored together, ordered by the SK. This allows you to perform complex queries like "get all orders for customer_123 from last month."</li>
+                </ul>
+            </p>
+            <p><strong>The Real-World Scenario (SynthMart):</strong> For our `orders` table, we choose `customer_id` as the PK and `order_date` as the SK. This allows us to very efficiently query for all orders for a specific customer, optionally filtering by a date range.</p>
             
             <div class="well-architected">
-                <strong>Well-Architected Pillar (Reliability): Built-in Error Handling & Retries</strong>
-                <p>An architect builds for failure. Step Functions allows you to define `Retry` and `Catch` blocks for every `Task` state. If a Glue job fails because of a temporary network issue (a transient error), you can configure a `Retry` block to automatically try running it again two more times with an exponential backoff. This makes the pipeline self-healing without any custom code.</p>
+                <strong>Well-Architected Pillar (Performance Efficiency): Choosing the Right Primary Key</strong>
+                <p>An architect knows that choosing the wrong Partition Key for DynamoDB leads to **"hot partitions"**, where one physical partition gets a disproportionate amount of traffic, leading to throttling and performance degradation. For SynthMart's product catalog, using `category` as the PK would be a disaster (all "Laptops" would hit one partition). Using `product_id` as the PK is the correct choice as it distributes the load evenly.</p>
             </div>
         </div>
+
+        <h2 class="task-statement">Domain 3 (Introduction): Data Operations and Support</h2>
+        <p>This domain is about what happens *after* the pipeline is built. How do you monitor it, troubleshoot it, and ensure it runs reliably? Your CKA experience is highly relevant here, but we focus on the AWS serverless tooling.</p>
+        
+        <h3>Key Service: Amazon CloudWatch</h3>
+        <p><strong>Hawk-Eye View:</strong> CloudWatch is the central nervous system for observability in AWS. If you can't see what your system is doing, you can't operate it. CloudWatch collects monitoring and operational data in the form of logs, metrics, and events.</p>
+        <p><strong>Visualization: The Observability Loop</strong></p>
+        <pre>
+ [AWS Services: Glue, Lambda, Kinesis]
+             |
+             +-- Emit Logs & Metrics --> [ Amazon CloudWatch ] --+
+                                               |                 |
+                                    (Analyzes & Aggregates)      |
+                                               |                 V
+                                               |           [ CloudWatch Alarms ]
+                                               |           (e.g., "Error Count > 5")
+                                               |                 |
+                                               |                 V
+                                               +---- Triggers -> [ SNS Notification ] -> [You]
+</pre>
         <div class="deep-dive-section">
-            <h4>The Architect's Decision Point: Step Functions vs. MWAA (Managed Airflow)</h4>
-            <p>This is a critical decision and a common exam theme. Both orchestrate workflows, but they serve different needs.</p>
+            <h4>Core Concepts</h4>
             <ul>
-                <li><strong>Choose Step Functions</strong> for event-driven, serverless architectures. It has tight, native integration with other AWS services like Lambda, SNS, and SQS. It's easier to manage and scales automatically. It's the "AWS-native" choice.</li>
-                <li><strong>Choose MWAA (Airflow)</strong> when your team has existing deep Python and Airflow expertise, or if you need to orchestrate tasks outside of AWS. Airflow's power comes from its vast library of community-built "providers" and its "code-first" approach to defining pipelines (DAGs) in Python.</li>
+                <li><strong>Logs:</strong> Raw text output from your applications and services (e.g., the output of a Glue script or Lambda function). Stored in `Log Groups`.</li>
+                <li><strong>Metrics:</strong> Time-series data points representing a variable over time (e.g., `CPUUtilization`, `ThrottledRequests`). Nearly every AWS service emits metrics automatically.</li>
+                <li><strong>Alarms:</strong> The proactive component. You watch a metric over a period, and if it breaches a threshold you define, the alarm changes state and can trigger an action.</li>
+                <li><strong>Events (now part of EventBridge):</strong> A stream of system events representing changes in AWS resources. You can write rules to react to these events (e.g., "When a Glue Job state changes to FAILED, trigger a Lambda function").</li>
             </ul>
-        </div>
-        
-        <hr>
 
-        <h3>Key Service: AWS Glue DataBrew (Data Quality & Cleansing)</h3>
-        <p><strong>Hawk-Eye View:</strong> Raw data is always messy. Before it can be used for analytics, it must be profiled, cleaned, and normalized. DataBrew is a visual data preparation tool that allows data analysts and engineers to do this without writing code.</p>
-        
-        <div class="deep-dive-section">
-            <h4>The Core Concept: Visual Data Preparation</h4>
-            <p>DataBrew provides a spreadsheet-like interface where you can apply over 250 built-in transformations to your data. The sequence of transformations you apply is saved as a **Recipe**, which can then be run as a job on a full dataset.</p>
-            <p><strong>The Real-World Scenario (SynthMart):</strong> We receive a monthly product file from a new supplier as a CSV. The `product_name` column is inconsistent (e.g., "Quantum Laptop", "quantum laptop", "  Quantum Laptop  "). A data analyst opens this file in a DataBrew **Project**, applies built-in transformations to trim whitespace and convert to uppercase, and filters out rows where the price is null. They save this as the `supplier_clean_up` **Recipe**. This recipe is now part of our automated ingestion pipeline.</p>
-            
             <h4>A Junior Engineer's Daily Task</h4>
-            <p>A DataBrew job fails. The junior engineer checks the job run history and sees that the job failed on a "convert to number" step. They open the DataBrew project, look at the job's output logs, and discover that a new file from the supplier contains non-numeric currency symbols (e.g., "$1,200.00") in the price column. They add a new "remove special characters" step to the recipe to fix the issue.</p>
-        </div>
+            <p>A daily ETL job fails. The junior engineer receives an automated SNS alert (triggered by a CloudWatch Alarm on the `glue.driver.aggregate.failedStages` metric). Their first action is to navigate to the CloudWatch Log Group for that specific job run, find the exact error message in the logs, and begin troubleshooting.</p>
 
+            <div class="well-architected">
+                <strong>Well-Architected Pillar (Operational Excellence): Automating Responses</strong>
+                <p>An architect doesn't just set up alerts for a human to look at. They design automated responses. For SynthMart, when a Kinesis stream experiences high `WriteProvisionedThroughputExceeded` for 5 straight minutes (monitored by a CloudWatch Alarm), that alarm doesn't just send an email. It triggers an **EventBridge rule** which invokes a **Lambda function** that automatically scales up the Kinesis stream by adding more shards via the AWS SDK. This is self-healing infrastructure.</p>
+            </div>
+        </div>
+        
         <div class="exam-prep">
-            <strong>Exam Prep & Question Patterns (examtopics.com)</strong>
-            <p>Go to the website and find questions related to these services.</p>
+            <strong>Exam Prep (Domains 2 & 3):</strong> Find questions on `examtopics.com` related to `DynamoDB` and `CloudWatch`.
             <ul>
-                <li>If a question asks to **coordinate multiple Lambda functions** or build a resilient serverless workflow, the answer is almost always <code>Step Functions</code>.</li>
-                <li>If a question asks for a **visual tool for business users to clean data** without code, the answer is <code>Glue DataBrew</code>.</li>
-                <li>Be ready to differentiate <code>Step Functions</code> (for serverless/event-driven orchestration) from <code>MWAA/Airflow</code> (for complex, schedule-based batch ETL).</li>
+                <li>For DynamoDB, focus on questions that require **low-latency key-value access**. If they mention hot partitions, the answer is always related to choosing a better, high-cardinality Partition Key.</li>
+                <li>For CloudWatch, any question about **monitoring, logging, or alerting** will involve CloudWatch. If the question asks to trigger an action based on a metric, the answer is a `CloudWatch Alarm`. If it asks to trigger an action based on an event (like a service changing state), the answer involves `EventBridge`.</li>
             </ul>
         </div>
     </div>
