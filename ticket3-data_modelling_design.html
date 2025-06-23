@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task #3: Data Modeling & Design</title>
+    <style>
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fff; color: #1c1e21; margin: 0; padding: 1rem 2rem; line-height: 1.6;}
+        .container {max-width: 1000px; margin: 0 auto;}
+        header {text-align: center; border-bottom: 1px solid #dddfe2; padding-bottom: 1.5rem; margin-bottom: 2rem;}
+        h1 {font-size: 2.5rem; color: #000; font-weight: 600; margin: 0;}
+        h1 span {font-size: 1.1rem; color: #606770; display: block; margin-top: 0.5rem; font-weight: 400;}
+        h2 {font-size: 2rem; color: #1877f2; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        p, li {font-size: 1.05rem; color: #333;}
+        pre {background-color: #282c34; color: #abb2bf; padding: 1rem 1.5rem; border-radius: 8px; overflow-x: auto; font-size: 0.9em;}
+        .task-box {border: 2px solid #1877f2; background-color: #f0f8ff; padding: 1rem 1.5rem; margin-top: 2rem; border-radius: 8px;}
+        .task-box h3 {margin-top:0;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hands-On Task #3: Senior Engineer / Architect
+                <span>TICKET-003: Data Modeling & Design for Personalization</span>
+            </h1>
+        </header>
+
+        <h2>The Scenario</h2>
+        <p>The business wants to launch a personalization initiative. This requires two things: 1) a very fast way to look up customer profile data to personalize the website in real-time, and 2) a way for the BI team to analyze sales trends based on customer demographics stored in their profiles.</p>
+        
+        <div class="task-box">
+            <h3>Your Mission</h3>
+            <p>This is a design task. You will not build everything, but you will design the solution and justify your decisions. Create a short design document (a text file is fine) that answers the following:</p>
+            <ol>
+                <li><strong>DynamoDB Table Design:</strong>
+                    <ul>
+                        <li>Design the schema for a new `user_profiles` table in DynamoDB. The table must store `user_id`, `email`, `first_name`, `last_name`, `city`, and `signup_date`.</li>
+                        <li>**Justify your choice for the Partition Key.** Why is it the right choice for performance and scalability?</li>
+                        <li>The marketing team wants to sometimes find users by email address. Propose a solution for this secondary access pattern. What kind of index would you use and why?</li>
+                    </ul>
+                </li>
+                <li><strong>Redshift Data Model Design:</strong>
+                    <ul>
+                        <li>Design a `dim_customer` dimension table for Amazon Redshift that will store this profile information for analytics.</li>
+                        <li>Draw a simple text-based star schema diagram showing how your new `dim_customer` table would join to a `fct_sales` table.</li>
+                    </ul>
+                </li>
+                <li><strong>Architectural Flowchart:</strong>
+                    <ul>
+                       <li>Draw a simple text-based flowchart showing the AWS services you would use to keep the Redshift `dim_customer` table synchronized with the DynamoDB `user_profiles` table. (Hint: Think about real-time updates).</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>Acceptance Criteria</h3>
+            <ul>
+                <li>A design document clearly explaining your choice of DynamoDB keys and indexes.</li>
+                <li>A clear star schema diagram for the Redshift model.</li>
+                <li>A logical flowchart for the DynamoDB-to-Redshift sync pipeline.</li>
+            </ul>
+
+            <h3>Core Concepts Cemented</h3>
+            <ul>
+                <li>Purpose-built data stores (using the right tool for the job).</li>
+                <li>DynamoDB data modeling (keys, indexes).</li>
+                <li>Redshift data modeling (star schema).</li>
+                <li>High-level pipeline architecture and design.</li>
+                <li>Justifying technical decisions based on business requirements.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
