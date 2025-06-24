@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Sharpening Session: Boto3 & Data Structures</title>
+    <style>
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fff; color: #1c1e21; margin: 0; padding: 1rem 2rem; line-height: 1.6;}
+        .container {max-width: 1000px; margin: 0 auto;}
+        header {text-align: center; border-bottom: 1px solid #dddfe2; padding-bottom: 1.5rem; margin-bottom: 2rem;}
+        h1 {font-size: 2.5rem; color: #000; font-weight: 600; margin: 0;}
+        h1 span {font-size: 1.1rem; color: #606770; display: block; margin-top: 0.5rem; font-weight: 400;}
+        h2 {font-size: 2rem; color: #28a745; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        p, li {font-size: 1.05rem; color: #333;}
+        code {font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; color: #d63384;}
+        pre {background-color: #282c34; color: #abb2bf; padding: 1rem 1.5rem; border-radius: 8px; overflow-x: auto; font-size: 0.9em;}
+        .tip {border-left: 4px solid #f0b90c; background-color: #fffbeb; padding: 1rem 1.5rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0;}
+        .tip strong {color: #d99c0a; display: block; margin-bottom: 0.5rem;}
+        .task-box {border: 2px solid #28a745; background-color: #e2f5e7; padding: 1rem 1.5rem; margin-top: 2rem; border-radius: 8px;}
+        .task-box h3 {margin-top:0;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Python Sharpening Session
+                <span>Boto3 & Data Structures for AWS</span>
+            </h1>
+        </header>
+
+        <h2>Part 1: The Core - Understanding `boto3`</h2>
+        <p><code>boto3</code> is the AWS SDK for Python. It's how your Python scripts interact with any AWS service. The fundamental concept is the **client**.</p>
+        <pre><code class="language-python"># Import the library
+import boto3
+
+# Create a low-level client for the S3 service
+# The client maps 1:1 with the underlying AWS API
+s3_client = boto3.client('s3')
+
+# Now you can use this client to call S3 API operations
+response = s3_client.list_buckets()
+
+# The response is ALWAYS a Python dictionary
+print(response)
+</code></pre>
+
+        <h2>Part 2: The Data - Navigating AWS Responses (Dictionaries)</h2>
+        <p>The biggest hurdle for newcomers is handling the data that `boto3` returns. AWS API responses are nested dictionaries. You must learn to navigate them.</p>
+        <p>When you call `s3_client.list_objects_v2(...)`, the response looks like this if files are found:</p>
+        <pre><code>{
+    'ResponseMetadata': {...},
+    'IsTruncated': False,
+    'Contents': [
+        {
+            'Key': '2025/06/24/08/file1.json',
+            'LastModified': ...,
+            'ETag': ...,
+            'Size': 123,
+            'StorageClass': 'STANDARD'
+        },
+        {
+            'Key': '2025/06/24/08/file2.json',
+            'LastModified': ...,
+            'ETag': ...,
+            'Size': 456,
+            'StorageClass': 'STANDARD'
+        }
+    ],
+    'Name': 'your-bucket-name',
+    'Prefix': '2025/06/24/08/',
+    'MaxKeys': 1000,
+    'KeyCount': 2
+}
+</code></pre>
+        <p>The critical part is the `Contents` key. Its value is a **list of dictionaries**, where each dictionary represents one object in S3.</p>
+        <p>Crucially, if **no objects** are found, the `Contents` key will be **missing** from the response entirely. This is why checking `if 'Contents' in response:` is so important.</p>
+
+        <h2>Part 3: The Logic - The Solution for Ticket #1</h2>
+        <p>Now we apply these concepts. Below is the complete, commented solution for the `verify_landing.py` script. Your task is not to write this from scratch, but to understand it completely.</p>
+        
+        <div class="task-box">
+            <h3>Your Mission for Today</h3>
+            <ol>
+                <li>Save the code below as `verify_landing.py` in your lab environment.</li>
+                <li>Read through the code and the comments until you understand the purpose of every line.</li>
+                <li>Run the script. It will likely fail initially because you need to update the `BUCKET_NAME`.</li>
+                <li>Update the `BUCKET_NAME` variable with the name of the bucket you created.</li>
+                <li>Run the script again. It should now print the `SUCCESS` message (assuming your Kinesis pipeline from the lab is still running and landing data).</li>
+                <li><strong>The Final Step:</strong> Prepare to explain this script back to me, block by block. Your goal is comprehension, not invention.</li>
+            </ol>
+            
+            <div class="code-block-header">Solution: verify_landing.py</div>
+            <pre><code class="language-python">import boto3
+from datetime import datetime, timezone
+
+# --- Configuration ---
+# IMPORTANT: You must update this with the name of your S3 bucket!
+BUCKET_NAME = "aida-lab-landing-zone-..." 
+# ---
+
+def verify_data_landing():
+    """
+    Checks if data has landed in the S3 bucket for the current UTC hour.
+    """
+    print(f"Starting verification for bucket: {BUCKET_NAME}")
+
+    # 1. GET THE CURRENT TIME & CONSTRUCT THE S3 PREFIX
+    # Firehose uses UTC time to create its partitions.
+    # We get the current UTC time to build the expected folder path.
+    now_utc = datetime.now(timezone.utc)
+    
+    # The strftime function formats the datetime object into a string.
+    # %Y = Year (e.g., 2025), %m = month, %d = day, %H = hour.
+    # This must match the prefix format Firehose creates.
+    s3_prefix = now_utc.strftime("%Y/%m/%d/%H/")
+    print(f"Constructed S3 prefix to check: {s3_prefix}")
+
+    # 2. CREATE AN S3 CLIENT & QUERY S3
+    # This creates the low-level client object to interact with S3.
+    s3_client = boto3.client('s3')
+
+    try:
+        # list_objects_v2 is the API call to list objects in a bucket.
+        # We specify the Bucket and the Prefix to narrow down the search.
+        response = s3_client.list_objects_v2(
+            Bucket=BUCKET_NAME,
+            Prefix=s3_prefix
+        )
+
+        # 3. ANALYZE THE RESPONSE
+        # We check if the 'Contents' key exists in the dictionary returned by AWS.
+        # If it doesn't exist, it means no objects matched the prefix.
+        if 'Contents' in response:
+            # The 'Contents' key holds a list of objects.
+            # We get the number of objects found by checking the length of this list.
+            object_count = len(response['Contents'])
+            print(f"SUCCESS: Found {object_count} file(s) in the prefix.")
+            
+            # Placeholder for the next step in a real pipeline
+            print("SIMULATION: In a real pipeline, we would now trigger the Glue Crawler.")
+        else:
+            # If the 'Contents' key is missing, no data was found.
+            print(f"FAILURE: No data found for the current hour in prefix '{s3_prefix}'.")
+
+    except s3_client.exceptions.NoSuchBucket:
+        print(f"ERROR: The bucket '{BUCKET_NAME}' does not exist. Please check your configuration.")
+    except Exception as e:
+        # Catch any other unexpected errors (like permissions issues).
+        print(f"An unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    verify_data_landing()
+
+</code></pre>
+        </div>
+    </div>
+</body>
+</html>
