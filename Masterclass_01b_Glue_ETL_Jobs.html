@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masterclass #2: AWS Glue - Catalog & ETL Jobs</title>
+    <style>
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fff; color: #1c1e21; margin: 0; padding: 1rem 2rem; line-height: 1.6;}
+        .container {max-width: 1100px; margin: 0 auto;}
+        header {text-align: center; border-bottom: 1px solid #dddfe2; padding-bottom: 1.5rem; margin-bottom: 2rem;}
+        h1 {font-size: 2.8rem; color: #000; font-weight: 700; margin: 0;}
+        h1 span {font-size: 1.2rem; color: #6c757d; display: block; margin-top: 0.5rem; font-weight: 400;}
+        h2 {font-size: 2.2rem; color: #d62976; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        h3 {font-size: 1.7rem; font-weight: 600; color: #232F3E; margin-top: 2rem;}
+        p, li, th, td {font-size: 1.05rem; color: #333;}
+        code {font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; color: #d63384;}
+        pre {background-color: #282c34; color: #abb2bf; padding: 1rem 1.5rem; border-radius: 8px; overflow-x: auto; font-size: 0.9em;}
+        .section {margin-bottom: 3rem;}
+        .deep-dive-section {border-left: 4px solid #d62976; background-color: #fafafa; padding: 1rem 1.5rem; margin-top: 1rem; border-radius: 0 8px 8px 0;}
+        .deep-dive-section h4 {font-size: 1.25rem; margin-top: 0; color: #232F3E;}
+        .well-architected {border: 1px solid #e2f5e7; background-color: #f8fdf9; padding: 1rem 1.5rem; margin-top: 1rem; border-radius: 8px;}
+        .well-architected strong {color: #218838;}
+        table {width: 100%; border-collapse: collapse; margin-top: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        th, td {border: 1px solid #dee2e6; padding: 0.85rem; text-align: left;}
+        th {background-color: #f8f9fa; font-weight: 600;}
+        .task-box {border: 2px solid #1877f2; background-color: #f0f8ff; padding: 1rem 1.5rem; margin-top: 2rem; border-radius: 8px;}
+        .task-box h3 {margin-top:0; color: #0056b3;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Architect's Masterclass
+                <span>AWS Glue (Part 2): The Data Catalog & ETL Engine</span>
+            </h1>
+        </header>
+
+        <div class="section">
+            <h2>1. The Data Catalog: Architect's Deep Dive</h2>
+            <p><strong>Hawk-Eye View:</strong> The Glue Data Catalog is the central, queryable "address book" for every data asset in your organization. It decouples the physical location of your data (S3) from its logical representation (tables), enabling discovery and governance.</p>
+            <div class="deep-dive-section">
+                <h4>Core Component: Table Versions</h4>
+                <p><strong>The Core Concept:</strong> The Data Catalog is not static. Every time a schema change is applied to a table (either by a crawler or manually), Glue creates a new, immutable **version** of that table's metadata. This provides a complete audit history of your schema.</p>
+                <p><strong>The Real-World Scenario (SynthMart):</strong> Our `orders` table initially has 10 columns. The app team adds a `promo_code` column. When our crawler runs, it creates Version 2 of the `orders` table metadata. A legacy financial reporting script, which doesn't know about `promo_code`, can be configured to continue querying Version 1 of the table, preventing the script from breaking. Meanwhile, new analytics queries can use Version 2 to analyze the effectiveness of promo codes.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. The Glue ETL Engine: Architect's Deep Dive</h2>
+            <p><strong>Hawk-Eye View:</strong> This is AWS's managed, serverless Apache Spark environment. You provide the code, and Glue manages the cluster required to run it. Its purpose is to perform large-scale data transformation.</p>
+            
+            <h3>The Control Panel: Glue Job Configuration</h3>
+            <table>
+                <thead>
+                    <tr><th>Parameter / Setting</th><th>What it Does</th><th>Architect's Consideration (The "Why")</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Worker Type</strong></td>
+                        <td>The "size" of the EC2 instances in your temporary Spark cluster. Key types are `G.1X` (balanced), `G.2X` (memory-optimized), `G.4X` (GPU-accelerated).</td>
+                        <td>This is a **vertical scaling** lever. A simple filter/projection job runs fine on `G.1X`. A job that performs a massive `JOIN` where one table needs to be broadcast to all nodes requires the extra memory of a `G.2X` worker to avoid `OutOfMemory` errors. You choose the type based on the workload profile.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Number of Workers</strong></td>
+                        <td>The number of EC2 instances (DPUs - Data Processing Units) to provision for the job.</td>
+                        <td>This is your **horizontal scaling** lever. More workers means more parallel processing power. A job that took 60 minutes with 10 workers might take ~30 minutes with 20 workers (at double the cost per minute). You balance speed vs. cost.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Job Bookmarks</strong></td>
+                        <td>A state-tracking mechanism that allows Glue to remember which files have already been processed.</td>
+                        <td>This is **critical for incremental ETL**. Without bookmarks, a daily job would re-process every file in S3 every single day. With bookmarks enabled, on Tuesday's run, the job will automatically ignore all the files it processed on Monday. This saves immense amounts of time and money.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Core Concept: DynamicFrames</h3>
+            <div class="deep-dive-section">
+                <p><strong>The What:</strong> A `DynamicFrame` is a data structure unique to AWS Glue, similar to a Spark `DataFrame`. However, while a DataFrame requires a single, strict schema for the entire dataset, a `DynamicFrame` is more flexible. Each record within it can have a slightly different schema.</p>
+                <p><strong>The Why (The Problem it Solves):</strong> It's designed specifically for cleaning messy, inconsistent raw data. Imagine SynthMart's raw JSON data. One record might have a `price` field as an integer (`1200`), while a buggy app version sends it as a string (`"1200.00"`). A Spark DataFrame would fail to load this inconsistent data. A DynamicFrame can handle it, representing `price` as a "choice" type (`int` or `string`). You can then use built-in DynamicFrame transformations like `resolveChoice` to clean and standardize the column into a single data type.</p>
+            </div>
+
+            <h3>Code & Implementation Examples</h3>
+            <p>Here is a practical, commented PySpark script for a Glue ETL job. This is the code you would put into the Glue Studio editor or save in S3 and point your job to.</p>
+            <pre><code class="language-python">
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+
+# --- Boilerplate: Initialize Glue & Spark Contexts ---
+args = getResolvedOptions(sys.argv, ["JOB_NAME"])
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args["JOB_NAME"], args)
+
+# --- Step 1: Read Raw Data using the Glue Data Catalog ---
+# We read from the 'sales' table defined in our 'synthmart_raw_db' database.
+# Glue automatically knows the S3 path and schema from the catalog.
+# We enable job bookmarks to only process new data.
+raw_sales_dyf = glueContext.create_dynamic_frame.from_catalog(
+    database="synthmart_raw_db",
+    table_name="sales",
+    transformation_ctx="raw_sales_dyf",
+    additional_options={"jobBookmarkKeys": ["order_id"], "enableJobBookmark": "true"}
+)
+print(f"Read {raw_sales_dyf.count()} new records from raw sales table.")
+
+# --- Step 2: Apply Transformations ---
+# Let's assume we want to add a new column 'processing_timestamp'
+from pyspark.sql.functions import current_timestamp
+
+# To use standard Spark functions, we convert the DynamicFrame to a Spark DataFrame
+sales_df = raw_sales_dyf.toDF()
+
+# Add the new column
+transformed_df = sales_df.withColumn("processing_timestamp", current_timestamp())
+
+# --- Step 3: Write Transformed Data to S3 in Parquet Format ---
+# Convert back to a DynamicFrame before writing
+transformed_dyf = DynamicFrame.fromDF(transformed_df, glueContext, "transformed_dyf")
+
+# Write the data to our processed S3 zone, partitioned by the sale date.
+# Partitioning is KEY for performance of downstream queries.
+glueContext.write_dynamic_frame.from_options(
+    frame=transformed_dyf,
+    connection_type="s3",
+    format="parquet",
+    connection_options={
+        "path": "s3://aida-lab-processed-zone/sales/",
+        "partitionKeys": ["sale_date"],
+    },
+    transformation_ctx="write_sales_parquet",
+)
+
+# --- Finalize the Job ---
+job.commit()
+</code></pre>
+
+        </div>
+        
+        <div class="section">
+            <h2>Hands-On Masterclass Lab</h2>
+            <div class="task-box">
+                <h3>TICKET-005: Author and Run Your First Glue ETL Job</h3>
+                <h4>Objective</h4>
+                <p>Manually create and run a simple Glue ETL job that reads the raw `sales.csv` data we cataloged previously, transforms it, and writes it out as Parquet.</p>
+                <h4>Phase 1: UI-First Exploration (In your ACG Lab)</h4>
+                <ol>
+                    <li><strong>Create Target Location:</strong> Create a new S3 folder: `s3://<your-landing-bucket>/processed/sales/`.</li>
+                    <li><strong>Go to AWS Glue Studio:</strong> Select "Visual ETL" and create a new job.</li>
+                    <li><strong>Source Node:</strong> For the source, select "AWS Glue Data Catalog" and choose your `sales` table from the `synthmart_raw_db` database.</li>
+                    <li><strong>Transform Node:</strong> Add a "SelectFields" transformation. Choose to keep only `order_id`, `product_id`, and `amount`.</li>
+                    <li><strong>Target Node:</strong> For the target, select "Amazon S3". Choose `Parquet` as the format and browse to your new `processed/sales/` S3 location.</li>
+                    <li><strong>Save and Run:</strong> Save the job, assign the `AWSGlueServiceRole`, and run it.</li>
+                    <li><strong>Verify:</strong> Check your `processed/sales/` S3 folder. You should see new `.parquet` files created by the job.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
