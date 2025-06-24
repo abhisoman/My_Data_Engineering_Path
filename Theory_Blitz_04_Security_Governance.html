@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEA-C01 Theory Blitz #4: Data Security & Governance</title>
+    <style>
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fff; color: #1c1e21; margin: 0; padding: 1rem 2rem; line-height: 1.6;}
+        .container {max-width: 1100px; margin: 0 auto;}
+        header {text-align: center; border-bottom: 1px solid #dddfe2; padding-bottom: 1.5rem; margin-bottom: 2rem;}
+        h1 {font-size: 2.5rem; color: #000; font-weight: 600; margin: 0;}
+        h1 span {font-size: 1.1rem; color: #606770; display: block; margin-top: 0.5rem; font-weight: 400;}
+        h2 {font-size: 2.2rem; color: #FF9900; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        h3 {font-size: 1.7rem; font-weight: 600; color: #232F3E; margin-top: 2rem;}
+        .task-statement {font-size: 1.3rem; font-weight: 700; color: #d62976; margin-top: 2.5rem;}
+        p, li {font-size: 1.05rem; color: #333;}
+        code {font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; color: #d63384;}
+        .multi-cloud-note {border: 1px solid #cce0ff; background-color: #f0f8ff; padding: 0.5rem 1.5rem; margin: 1rem 0; border-radius: 8px;}
+        .multi-cloud-note strong {color: #0056b3;}
+        .deep-dive-section {border-left: 4px solid #FF9900; background-color: #fafafa; padding: 1rem 1.5rem; margin-top: 1rem; border-radius: 0 8px 8px 0;}
+        .deep-dive-section h4 {font-size: 1.25rem; margin-top: 0; color: #232F3E;}
+        .deep-dive-section strong {color: #c5221f;}
+        .well-architected {border: 1px solid #e2f5e7; background-color: #f8fdf9; padding: 1rem 1.5rem; margin-top: 1rem; border-radius: 8px;}
+        .well-architected strong {color: #218838;}
+        .exam-prep {border: 2px solid #28a745; background-color: #e2f5e7; padding: 1rem 1.5rem; margin-top: 1.5rem; border-radius: 8px;}
+        .exam-prep strong {color: #218838;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DEA-C01 Theory Blitz: Module 5
+                <span>Domain 4: Data Security and Governance (18%)</span>
+            </h1>
+        </header>
+        <p>This domain is what separates a senior architect from a mid-level engineer. It's about building systems that are not just functional, but also secure, compliant, and trustworthy.</p>
+        
+        <h2 class="task-statement">Task 4.1 & 4.2: Authentication & Authorization</h2>
+        <h3>Key Service: IAM (Identity and Access Management)</h3>
+        <p><strong>Hawk-Eye View:</strong> IAM is the foundation of AWS security. It answers two questions: 1) **Authentication:** Who are you? (Principal) and 2) **Authorization:** What are you allowed to do? (Permissions).</p>
+        <div class="deep-dive-section">
+            <h4>The Core Concept: Roles, Users, and Policies</h4>
+            <p><strong>Users</strong> are for people. **Roles** are for services. Your Glue job or Lambda function should **NEVER** use a person's access keys. Instead, it **assumes an IAM Role** to get temporary, automatically rotated credentials.</p>
+            <p><strong>Policies</strong> are JSON documents attached to roles/users that define permissions. The golden rule is the **Principle of Least Privilege**: grant only the minimum permissions necessary to perform a task.</p>
+            
+            <h4>The Real-World Scenario (SynthMart)</h4>
+            <p>Our Glue transformation job needs to read from the `s3://aida-dev-landing-zone/raw/` prefix and write to the `s3://aida-dev-processed-zone/` prefix. We create an IAM Role with a policy that `Allow`s `s3:GetObject` on `arn:aws:s3:::aida-dev-landing-zone/raw/*` and `s3:PutObject` on `arn:aws:s3:::aida-dev-processed-zone/*`. It has no other permissions. It cannot delete files or access other buckets.</p>
+            
+            <div class="well-architected">
+                <strong>Well-Architected Pillar (Security): Storing Secrets</strong>
+                <p>An architect never hardcodes database passwords or API keys in code. Our SynthMart ETL job needs to connect to Redshift. We store the Redshift password in **AWS Secrets Manager**. We then add a permission to our Glue job's IAM Role that allows it to retrieve *only that specific secret* from Secrets Manager at runtime. The code is clean of credentials, and the secret can be automatically rotated.</p>
+            </div>
+        </div>
+
+        <h3>Key Service: AWS Lake Formation</h3>
+        <p><strong>Hawk-Eye View:</strong> Lake Formation provides a centralized, simplified permission model for your data lake. It acts as a security guard that sits on top of S3 and the Glue Data Catalog.</p>
+        <div class="deep-dive-section">
+            <h4>The Core Concept: Fine-Grained Access Control</h4>
+            <p>While IAM controls access to services (e.g., "you can run Athena queries"), Lake Formation controls access to the **data itself** (e.g., "you can query the `synthmart_raw` database, but only see the `orders` table, and within that table, you can only see the `amount` column but not the `customer_name` column"). It allows for column-level and row-level security.</p>
+            <p><strong>The Architect's Decision Point:</strong> You use Lake Formation to simplify permissions at scale. Instead of managing complex S3 bucket policies and IAM policies for hundreds of users and tables, you manage all data access from a single, central location.</p>
+        </div>
+
+        <h2 class="task-statement">Task 4.3: Ensure data encryption and masking.</h2>
+        <h3>Key Concept: Encryption at Rest & In Transit</h3>
+        <p><strong>Hawk-Eye View:</strong> Data must be protected everywhere. Encryption in transit (TLS/SSL) protects it on the network. Encryption at rest protects it when it's stored on disk.</p>
+        <div class="deep-dive-section">
+            <h4>The Architect's Decision Point: SSE-S3 vs. SSE-KMS</h4>
+            <p>This is a frequent exam question. Both encrypt your data on the server side in S3.</p>
+            <ul>
+                <li><strong>SSE-S3:</strong> AWS manages the encryption keys. It's the simplest option—you just check a box. It provides a baseline of security.</li>
+                <li><strong>SSE-KMS:</strong> You use the AWS Key Management Service (KMS). You create and manage the lifecycle of the keys (though not the key material itself). This provides a crucial feature: an **audit trail**. You can see in CloudTrail every time the key was used by a service or user to decrypt data. For sensitive data, this auditability is mandatory.</li>
+            </ul>
+            <p><strong>The Real-World Scenario (SynthMart):</strong> For our general log files, we use `SSE-S3`. For the S3 bucket containing financial reports with Personally Identifiable Information (PII), we **must** use `SSE-KMS` with a customer-managed key so we have a full audit trail of who accessed the data, which is a requirement for compliance standards like GDPR and PCI DSS.</p>
+        </div>
+
+        <h2 class="task-statement">Task 4.4 & 4.5: Prepare logs for audit & understand governance.</h2>
+        <h3>Key Service: AWS CloudTrail</h3>
+        <p><strong>Hawk-Eye View:</strong> If CloudWatch is for monitoring application and performance logs, CloudTrail is for **security and audit logs**. It answers the question, "Who did what, when, and from where?"</p>
+        <div class="multi-cloud-note">
+            <strong>Multi-Cloud Counterparts:</strong> GCP: <code>Cloud Audit Logs</code>, Azure: <code>Azure Monitor Activity Log</code>.
+        </div>
+        <div class="deep-dive-section">
+            <h4>The Core Concept: API Call Logging</h4>
+            <p>CloudTrail logs (nearly) every single authenticated API call made in your AWS account. `s3:PutObject`, `kinesis:CreateStream`, `ec2:RunInstances`—every action is recorded. This is your primary tool for security investigations and compliance audits.</p>
+            <p><strong>A Junior Engineer's Daily Task:</strong> A senior engineer might say, "The `aida-dev-customer-pii` S3 bucket was deleted last night. Find out who did it." The junior engineer's task is to go into CloudTrail, filter for the `DeleteBucket` event name on that specific resource ARN, and identify the User/Role principal that made the API call.</p>
+        </div>
+        
+        <h3>Key Service: Amazon Macie</h3>
+        <p><strong>Hawk-Eye View:</strong> Macie is a data security service that uses machine learning to automatically discover, classify, and protect sensitive data in your S3 data lake.</p>
+        <div class="deep-dive-section">
+            <h4>The Real-World Scenario (SynthMart)</h4>
+            <p>SynthMart has petabytes of data in S3. We don't know where all the PII (credit card numbers, email addresses, phone numbers) might be. An architect enables Macie. Macie scans all the S3 buckets and generates findings, creating a dashboard that shows "I found 5 buckets containing data that looks like credit card numbers" or "This bucket is unencrypted and publicly accessible." It's an automated data security posture management tool.</p>
+        </div>
+
+        <div class="exam-prep">
+            <strong>Exam Prep (Domain 4):</strong> Go to `examtopics.com` and find questions related to security.</p>
+            <ul>
+                <li>If a question is about permissions for a **service**, the answer is always an <code>IAM Role</code>.</li>
+                <li>If it's about storing **passwords/secrets**, the answer is <code>Secrets Manager</code>.</li>
+                <li>For **fine-grained (column-level) data access**, think <code>Lake Formation</code>.</li>
+                <li>For **auditing API calls** ("who deleted the bucket?"), the answer is <code>CloudTrail</code>.</li>
+                <li>For **automatically discovering PII** in S3, the answer is <code>Amazon Macie</code>.</li>
+                <li>For encryption, understand the difference between `SSE-S3` (simple) and `SSE-KMS` (auditable control).</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
