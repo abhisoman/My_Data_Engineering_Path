@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEA-C01 Theory Blitz #3b: Orchestration & Data Quality</title>
+    <style>
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fff; color: #1c1e21; margin: 0; padding: 1rem 2rem; line-height: 1.6;}
+        .container {max-width: 1100px; margin: 0 auto;}
+        header {text-align: center; border-bottom: 1px solid #dddfe2; padding-bottom: 1.5rem; margin-bottom: 2rem;}
+        h1 {font-size: 2.5rem; color: #000; font-weight: 600; margin: 0;}
+        h1 span {font-size: 1.1rem; color: #606770; display: block; margin-top: 0.5rem; font-weight: 400;}
+        h2 {font-size: 2.2rem; color: #FF9900; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        h3 {font-size: 1.7rem; font-weight: 600; color: #232F3E; margin-top: 2rem;}
+        .task-statement {font-size: 1.3rem; font-weight: 700; color: #d62976; margin-top: 2.5rem;}
+        p, li {font-size: 1.05rem; color: #333;}
+        code {font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; color: #d63384;}
+        .multi-cloud-note {border: 1px solid #cce0ff; background-color: #f0f8ff; padding: 0.5rem 1.5rem; margin: 1rem 0; border-radius: 8px;}
+        .multi-cloud-note strong {color: #0056b3;}
+        .deep-dive-section {border-left: 4px solid #FF9900; background-color: #fafafa; padding: 1rem 1.5rem; margin-top: 1rem; border-radius: 0 8px 8px 0;}
+        .deep-dive-section h4 {font-size: 1.25rem; margin-top: 0; color: #232F3E;}
+        .deep-dive-section strong {color: #c5221f;}
+        .well-architected {border: 1px solid #e2f5e7; background-color: #f8fdf9; padding: 1rem 1.5rem; margin-top: 1rem; border-radius: 8px;}
+        .well-architected strong {color: #218838;}
+        .exam-prep {border: 2px solid #28a745; background-color: #e2f5e7; padding: 1rem 1.5rem; margin-top: 1.5rem; border-radius: 8px;}
+        .exam-prep strong {color: #218838;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DEA-C01 Theory Blitz: Module 3b
+                <span>Deep Dive: Orchestration & Data Quality</span>
+            </h1>
+        </header>
+
+        <h2 class="task-statement">Domain 3: Data Operations and Support</h2>
+
+        <h3>Key Service: AWS Step Functions (Orchestration)</h3>
+        <p><strong>Hawk-Eye View:</strong> Individual jobs (like ingestion or transformation) are just steps. A data pipeline is a sequence of these steps that must be managed. Step Functions is a serverless orchestrator that allows you to build and visualize these workflows, manage dependencies, and handle errors.</p>
+        <div class="multi-cloud-note">
+            <strong>Multi-Cloud Counterparts:</strong> GCP: <code>Google Cloud Workflows</code>, Azure: <code>Azure Logic Apps</code>.
+        </div>
+        <p><strong>Visualization: A Basic ETL Workflow for SynthMart</strong></p>
+        <pre>
+[START]
+   |
+   V
+[ Run Glue Crawler to Catalog New Data ]
+   |
+   V
+[ Run Glue ETL Job to Transform Data ]
+   |
+   V
+[ CHOICE: Did Glue Job Succeed? ] --(Yes)--> [ Run Redshift COPY Command ] -> [ SUCCESS ]
+   |
+ (No/Fail)
+   |
+   V
+[ Send SNS "Failure" Alert ] -> [ FAIL ]
+        </pre>
+        <div class="deep-dive-section">
+            <h4>The Core Concept: State Machines</h4>
+            <p>You define your workflow as a **State Machine**, which is essentially a flowchart. Each step in the flowchart is a **State**. Key state types you must know for the exam:</p>
+            <ul>
+                <li><code>Task</code>: Represents a single unit of work, like "run a Lambda function" or "start a Glue job."</li>
+                <li><code>Choice</code>: Acts like an `if-then-else` statement to direct the workflow down different paths.</li>
+                <li><code>Parallel</code>: Allows you to run multiple branches of your workflow at the same time.</li>
+                <li><code>Wait</code>: Pauses the workflow for a specified amount of time.</li>
+            </ul>
+            <p><strong>The Real-World Scenario (SynthMart):</strong> Our daily pipeline must be resilient. We build a Step Functions workflow. If the Glue ETL job fails, the `Choice` state routes the workflow to a `Task` state that sends an alert to the on-call engineer's Slack channel via SNS and Lambda.</p>
+            
+            <div class="well-architected">
+                <strong>Well-Architected Pillar (Reliability): Built-in Error Handling & Retries</strong>
+                <p>An architect builds for failure. Step Functions allows you to define `Retry` and `Catch` blocks for every `Task` state. If a Glue job fails because of a transient error, you can configure a `Retry` block to automatically try running it again two more times with an exponential backoff. This makes the pipeline self-healing.</p>
+            </div>
+        </div>
+        <div class="deep-dive-section">
+            <h4>The Architect's Decision Point: Step Functions vs. MWAA (Managed Airflow)</h4>
+            <p>This is a critical decision and a common exam theme. Both orchestrate workflows, but they serve different needs.</p>
+            <ul>
+                <li><strong>Choose Step Functions</strong> for event-driven, serverless architectures with tight AWS service integration. It's easier to manage and scales automatically.</li>
+                <li><strong>Choose MWAA (Airflow)</strong> when your team has deep Python/Airflow expertise, or you need to orchestrate tasks outside of AWS. It is the open-source standard, defined entirely in Python code (DAGs).</li>
+            </ul>
+        </div>
+        
+        <hr>
+
+        <h3>Key Service: AWS Glue DataBrew (Data Quality & Cleansing)</h3>
+        <p><strong>Hawk-Eye View:</strong> Raw data is always messy. Before it can be used for analytics, it must be profiled, cleaned, and normalized. DataBrew is a visual data preparation tool that allows data analysts and engineers to do this without writing code.</p>
+        
+        <div class="deep-dive-section">
+            <h4>The Core Concept: Visual Data Preparation</h4>
+            <p>DataBrew provides a spreadsheet-like interface where you can apply over 250 built-in transformations. The sequence of transformations is saved as a **Recipe**, which can then be run as a job on a full dataset.</p>
+            <p><strong>The Real-World Scenario (SynthMart):</strong> We receive a monthly product file from a new supplier as a CSV. The `product_name` column is inconsistent. A data analyst opens this file in a DataBrew **Project**, applies built-in transformations to trim whitespace and convert to uppercase, and filters out rows where the price is null. They save this as the `supplier_clean_up` **Recipe**.</p>
+            
+            <h4>A Junior Engineer's Daily Task</h4>
+            <p>A DataBrew job fails. The junior engineer checks the job run history and sees that the job failed on a "convert to number" step. They open the DataBrew project and discover that a new file contains non-numeric currency symbols (e.g., "$1,200.00") in the price column. They add a new "remove special characters" step to the recipe to fix the issue.</p>
+
+            <div class="well-architected">
+                <strong>Well-Architected Pillar (Operational Excellence): Automating Data Quality Gates</strong>
+                <p>An architect automates data validation. They create a DataBrew recipe that defines the "good" state of a dataset. This recipe is then used in an automated pipeline (triggered by Step Functions) where if a new file fails the quality checks defined in the recipe, it's moved to an "error" S3 prefix and an alert is sent, preventing bad data from ever entering the main data lake.</p>
+            </div>
+        </div>
+
+        <div class="exam-prep">
+            <strong>Exam Prep & Question Patterns (examtopics.com)</strong>
+            <p>Go to the website and find questions related to these services.</p>
+            <ul>
+                <li>If a question asks to **coordinate multiple Lambda functions** or build a resilient serverless workflow, the answer is almost always <code>Step Functions</code>.</li>
+                <li>If a question asks for a **visual tool for business users to clean data** without code, the answer is <code>Glue DataBrew</code>.</li>
+                <li>Be ready to differentiate <code>Step Functions</code> (for serverless/event-driven orchestration) from <code>MWAA/Airflow</code> (for complex, schedule-based batch ETL).</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
