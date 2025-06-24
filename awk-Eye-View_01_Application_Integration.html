@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hawk-Eye View: Application Integration</title>
+    <style>
+        body {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #fff; color: #1c1e21; margin: 0; padding: 1rem 2rem; line-height: 1.6;}
+        .container {max-width: 1100px; margin: 0 auto;}
+        header {text-align: center; border-bottom: 1px solid #dddfe2; padding-bottom: 1.5rem; margin-bottom: 2rem;}
+        h1 {font-size: 2.5rem; color: #000; font-weight: 600; margin: 0;}
+        h1 span {font-size: 1.1rem; color: #606770; display: block; margin-top: 0.5rem; font-weight: 400;}
+        h2 {font-size: 2.2rem; color: #4D9DE0; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        h3 {font-size: 1.7rem; font-weight: 600; color: #232F3E; margin-top: 2rem;}
+        p, li {font-size: 1.05rem; color: #333;}
+        .service-card {border: 1px solid #e7e7e7; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        .service-card h3 {margin-top:0;}
+        .analogy {font-style: italic; color: #6c757d; border-left: 3px solid #4D9DE0; padding-left: 1rem; margin-top: 0.5rem;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hawk-Eye View
+                <span>Application Integration Services for Data Pipelines</span>
+            </h1>
+        </header>
+
+        <div class="service-card">
+            <h3>Amazon SNS (Simple Notification Service)</h3>
+            <p><strong>What it is:</strong> A fully managed pub/sub messaging service for broadcasting messages to a large number of subscribers.</p>
+            <p class="analogy"><strong>Analogy:</strong> A megaphone or a broadcast alert system.</p>
+            <p><strong>Use it in a Data Pipeline when:</strong> You need to send a single message to multiple, different kinds of endpoints simultaneously. For example, when a critical ETL job fails, a single SNS notification can trigger an email to the data engineering team, send a message to a Slack channel via a Lambda function, and create a ticket in a PagerDuty system all at once.</p>
+        </div>
+
+        <div class="service-card">
+            <h3>Amazon SQS (Simple Queue Service)</h3>
+            <p><strong>What it is:</strong> A fully managed message queuing service that decouples and scales microservices, distributed systems, and serverless applications.</p>
+            <p class="analogy"><strong>Analogy:</strong> A to-do list or a conveyor belt for tasks.</p>
+            <p><strong>Use it in a Data Pipeline when:</strong> You need to **decouple** a fast producer from a slow consumer. For example, SynthMart's website might generate 10,000 "new user signed up" events per minute. A downstream process that enriches this user data might only be able to handle 1,000 records per minute. By placing the events in an SQS queue, you ensure no events are lost, and the enrichment process can work through the backlog at its own pace.</p>
+        </div>
+        
+        <div class="service-card">
+            <h3>Amazon EventBridge</h3>
+            <p><strong>What it is:</strong> A serverless, event bus that makes it easy to connect applications together using data from your own apps, integrated SaaS applications, and AWS services.</p>
+            <p class="analogy"><strong>Analogy:</strong> A smart, central routing station for all events happening in your cloud.</p>
+            <p><strong>Use it in a Data Pipeline when:</strong> You need to build sophisticated, event-driven architectures. It goes beyond SQS/SNS. For example, when a new file lands in S3, it generates an `s3:ObjectCreated:Put` event. You can create an EventBridge rule that says: "IF the object's name ends in `.csv` AND its size is greater than 1MB, THEN send this event to a specific Step Functions workflow for processing." It allows for content-based filtering and routing of events.</p>
+        </div>
+        
+        <div class="service-card">
+            <h3>Amazon AppFlow</h3>
+            <p><strong>What it is:</strong> A fully managed integration service that enables you to securely transfer data between SaaS applications like Salesforce, Google Analytics, Zendesk, and AWS services like S3 and Redshift, all without writing code.</p>
+            <p class="analogy"><strong>Analogy:</strong> A set of pre-built, managed "data connectors" for popular business applications.</p>
+            <p><strong>Use it in a Data Pipeline when:</strong> You need to ingest data from a supported SaaS application. For SynthMart, instead of writing complex Python code to interact with the Salesforce API, you would create an AppFlow "flow" that says "Every night at 2 AM, pull all new 'Opportunity' records from Salesforce and save them as Parquet files in our `s3://.../raw/salesforce/` landing zone."</p>
+        </div>
+    </div>
+</body>
+</html>
