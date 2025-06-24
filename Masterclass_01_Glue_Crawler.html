@@ -23,6 +23,8 @@
         table {width: 100%; border-collapse: collapse; margin-top: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
         th, td {border: 1px solid #dee2e6; padding: 0.85rem; text-align: left;}
         th {background-color: #f8f9fa; font-weight: 600;}
+        .task-box {border: 2px solid #1877f2; background-color: #f0f8ff; padding: 1rem 1.5rem; margin-top: 2rem; border-radius: 8px;}
+        .task-box h3 {margin-top:0; color: #0056b3;}
     </style>
 </head>
 <body>
@@ -34,15 +36,20 @@
         </header>
 
         <div class="section">
-            <h2>1. The Executive Summary</h2>
+            <h2>1. The Executive Summary (Hawk-Eye View)</h2>
             <p><strong>What it is:</strong> A managed service that scans data stores, infers schemas, and registers metadata tables in the AWS Glue Data Catalog.</p>
-            <p><strong>The Problem it Solves:</strong> It automates the tedious and error-prone process of discovering and documenting raw data, turning an unusable "data swamp" into a queryable "data lake."</p>
-            <p><strong>The Analogy:</strong> A Glue Crawler is a **robotic librarian** who creates a perfect card catalog entry for every book dropped in the library, enabling discovery.</p>
+            <p><strong>The Problem it Solves:</strong> For SynthMart, it automates the discovery of raw data landing in S3, making a "data swamp" discoverable and queryable.</p>
+            <p><strong>The Analogy:</strong> A Glue Crawler is a **robotic librarian** that creates a perfect card catalog entry for every new book.</p>
         </div>
 
         <div class="section">
-            <h2>2. The Control Panel: Crawler Configuration Deep Dive</h2>
-            <p>Mastering the crawler means mastering its configuration. These are the levers you pull as an architect.</p>
+            <h2>2. The Core Mechanics (The "How")</h2>
+            <p>The crawler connects to a data store, samples files, uses classifiers to determine format (JSON, CSV, Parquet), infers the schema, and then creates or updates a table in the Glue Data Catalog.</p>
+        </div>
+        
+        <div class="section">
+            <h2>3. The Control Panel: Crawler Configuration Deep Dive</h2>
+            <p>This is a detailed look at the key configuration levers you control as an architect.</p>
             <table>
                 <thead>
                     <tr><th>Parameter / Setting</th><th>What it Does</th><th>Architect's Consideration (The "Why")</th></tr>
@@ -50,51 +57,110 @@
                 <tbody>
                     <tr>
                         <td><strong>IAM Role</strong></td>
-                        <td>Grants the crawler permissions to access data stores (e.g., S3) and the Glue Data Catalog.</td>
-                        <td><strong>This is the #1 point of failure.</strong> A misconfigured role is the most common reason a crawler fails. You must ensure it has `s3:GetObject` and `s3:ListBucket` on the source path, and `glue:*` permissions on the catalog objects. Apply the Principle of Least Privilege.</td>
+                        <td>Grants the crawler permissions to access data stores and the Glue Data Catalog.</td>
+                        <td><strong>This is the #1 point of failure.</strong> Must have S3 read access and Glue permissions. Apply least privilege.</td>
                     </tr>
                     <tr>
                         <td><strong>Include / Exclude Patterns</strong></td>
-                        <td>Uses glob patterns (`*`, `?`, `**`) to explicitly tell the crawler which S3 paths to scan and which to ignore.</td>
-                        <td><strong>This is your primary cost and performance lever.</strong> Never point a crawler at a raw bucket root. Always scope it to a specific prefix (e.g., `s3://bucket/raw/sales/**`). Use exclude patterns to ignore temporary files, logs, or failed records (e.g., `**/_tmp/`, `**/*.error`).</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Crawler Schedule</strong></td>
-                        <td>How often the crawler runs (e.g., hourly, daily, on-demand).</td>
-                        <td>This is a direct trade-off between **data freshness** and **cost**. An hourly crawl provides fresher metadata but costs more than a daily crawl. For SynthMart's daily sales data, a nightly schedule is sufficient. For near real-time data, a crawler is the wrong tool; an event-driven Lambda function is better.</td>
+                        <td>Uses glob patterns to explicitly tell the crawler which S3 paths to scan and ignore.</td>
+                        <td><strong>This is your primary cost and performance lever.</strong> Never point a crawler at a bucket root. Always scope it to a specific prefix.</td>
                     </tr>
                     <tr>
                         <td><strong>Schema Update Behavior</strong></td>
                         <td>Defines how the crawler handles changes it detects between the data and the existing catalog table.</td>
-                        <td><strong>This is the core of schema evolution management.</strong> The key options are `Update all new and existing partitions with metadata from the table` and `Add new columns`. You must decide if you trust the crawler to modify existing schemas or if you'd rather it just `Ignore the change` and send a log notification for manual review.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Table Grouping Policy</strong></td>
-                        <td>Tells the crawler whether to create one big table or multiple smaller tables when it finds different schemas in its path.</td>
-                        <td>For a well-structured data lake, you typically want this **disabled**. You should have one S3 prefix per dataset, which should result in one table. Enabling this can lead to the crawler creating dozens of unexpected tables if your source data is inconsistent.</td>
+                        <td><strong>This is the core of schema evolution management.</strong> An architect must decide on the policy: update the schema automatically or just log the changes for manual review.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <div class="section">
-            <h2>3. In the Trenches: Real-World Scenarios</h2>
-            <div class="deep-dive-section">
-                <h4>A Junior Engineer's Daily Task</h4>
-                <p>A nightly crawler run fails. The junior engineer's playbook is: 1) Check CloudWatch Logs for the crawler run to find the specific error message (likely an IAM or S3 access issue). 2) Check the crawler's run history in the Glue console to see which files it failed on. 3) Verify the IAM role has the correct permissions for the S3 path. 4) If it's a data issue (e.g., a malformed file), quarantine the problematic file and re-run the crawler.</p>
-            </div>
-             <div class="deep-dive-section">
-                <h4>An Architect's Strategic Task</h4>
-                <p>The business acquires a new company, "QuantumLeap," which provides its sales data in a completely different CSV format. The architect's task is **not** to just point a crawler at it. Their task is to: 1) Design a new, standardized S3 prefix structure for all incoming M&A data. 2) Create a dedicated IAM Role for the QuantumLeap data ingestion process. 3) Write a custom Glue Classifier to correctly handle QuantumLeap's unique date formats. 4) Design the downstream Glue ETL job that will normalize the QuantumLeap data into the standard SynthMart `sales` table format.</p>
-            </div>
+            <h2>4. In the Trenches: Practical Knowledge</h2>
+            <p>A junior engineer debugs failed crawler runs by checking CloudWatch Logs. A senior engineer optimizes slow crawlers by implementing incremental crawls instead of full scans.</p>
         </div>
 
         <div class="section">
-            <h2>4. The Broader Ecosystem & Industry Trends</h2>
-            <div class="well-architected">
-                <strong>Industry Trend: The Decline of the "Discovery" Crawler</strong>
-                <p>While crawlers are excellent for initial data exploration and managing partitions, mature data platforms are moving away from using them for schema *discovery* on processed data. The modern best practice is **"Schema-on-Write"** enforced by code. Your ETL/ELT job (using Glue, Spark, or dbt) is responsible for creating clean data that strictly adheres to a predefined contract. The schema for this clean data is then defined declaratively (e.g., in Terraform or a dbt model YAML file), not inferred by a crawler. This makes the data platform more robust, predictable, and auditable.</p>
-                <p><strong>The takeaway:</strong> Use crawlers heavily on your raw, unpredictable data zone. Use declarative, code-based schema definitions for your processed and curated zones.</p>
+            <h2>5. Code & Implementation Examples</h2>
+            <p>Theory is nothing without seeing the code. Here is how you interact with the Glue Catalog and Crawlers using different tools.</p>
+            
+            <h3>Interacting via SQL (in Amazon Athena)</h3>
+            <p>Once a crawler has run, the table is available to any query engine that uses the Glue Catalog. The most common is Athena. Your primary SQL language here is based on **Presto/Trino SQL**.</p>
+            <pre><code class="language-sql">-- Querying the data after a crawler has created the 'sales' table
+SELECT * FROM "synthmart_raw"."sales" WHERE year = '2025' LIMIT 10;
+
+-- Manually telling the catalog to re-scan for new partitions in S3
+-- This is an alternative to re-running a crawler for partition updates.
+MSCK REPAIR TABLE "synthmart_raw"."sales";
+</code></pre>
+
+            <h3>Interacting via SDK (Python/Boto3)</h3>
+            <p>You can programmatically control crawlers from a Lambda function or any Python script.</p>
+            <pre><code class="language-python">import boto3
+
+glue_client = boto3.client('glue')
+
+def start_glue_crawler(crawler_name):
+    """Starts a specific AWS Glue Crawler run."""
+    try:
+        print(f"Starting crawler: {crawler_name}...")
+        response = glue_client.start_crawler(Name=crawler_name)
+        print("Crawler started successfully.")
+        return response
+    except glue_client.exceptions.CrawlerRunningException:
+        print("Crawler is already running.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+# We would call this from our orchestration script
+# start_glue_crawler(crawler_name="SynthMart_Raw_Sales_Crawler")
+</code></pre>
+
+            <h3>Interacting via IaC (Terraform)</h3>
+            <p>As an architect, you should define your crawlers as code for repeatability.</p>
+            <pre><code class="language-hcl">resource "aws_glue_crawler" "sales_crawler" {
+  name          = "SynthMart_Raw_Sales_Crawler"
+  database_name = aws_glue_catalog_database.synthmart_raw.name
+  role          = aws_iam_role.glue_crawler_role.arn
+
+  s3_target {
+    path = "s3://${aws_s3_bucket.landing_zone.bucket}/raw/sales/"
+  }
+
+  schema_change_policy {
+    update_behavior = "LOG"
+    delete_behavior = "LOG"
+  }
+  
+  # Run every day at 1 AM UTC
+  schedule = "cron(0 1 * * ? *)" 
+}
+</code></pre>
+        </div>
+
+        <div class="section">
+            <h2>6. Hands-On Masterclass Lab</h2>
+            <div class="task-box">
+                <h3>TICKET-004: Implement and Automate Data Discovery</h3>
+                <h4>Objective</h4>
+                <p>Manually create and run a Glue Crawler to catalog the sample `sales.csv` data, then describe how you would automate it.</p>
+                <h4>Phase 1: UI-First Exploration</h4>
+                <ol>
+                    <li><strong>Prepare Data:</strong> If not already done, create the `sales.csv` file from our previous guide and upload it to your S3 landing zone under the prefix `raw/sales/`.</li>
+                    <li><strong>Create an IAM Role:</strong> In the IAM console, create a new role for the Glue service. Attach the AWS-managed policy `AWSGlueServiceRole`. In a real project, you'd create a more restrictive custom policy.</li>
+                    <li><strong>Create a Crawler:</strong> In the AWS Glue console, create a new crawler.
+                        <ul>
+                            <li>Point it to your S3 `raw/sales/` path.</li>
+                            <li>Assign the IAM role you just created.</li>
+                            <li>Have it create a new database named `synthmart_raw_db`.</li>
+                            <li>Leave other settings as default.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Run & Verify:</strong> Run the crawler. After it succeeds, navigate to the Glue Data Catalog and inspect the `sales` table it created. Check the schema it inferred.</li>
+                    <li><strong>Query with Athena:</strong> Go to the Amazon Athena query editor. Select the `synthmart_raw_db` database and run `SELECT * FROM sales LIMIT 10;`. See your data appear.</li>
+                </ol>
+                <h4>Phase 2: The Architect's Whiteboard</h4>
+                <p>You don't need to write the code for this part, but you must describe the plan.</p>
+                <p><strong>Answer this question:</strong> "How would you take what you just did manually and make it a repeatable, production-grade process using Infrastructure as Code?" (Hint: Reference the Terraform code block from Section 5).</p>
             </div>
         </div>
     </div>
