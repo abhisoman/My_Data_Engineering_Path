@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Architect's Visual Roadmap</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Source+Code+Pro&display=swap');
+
+        :root {
+            --bg-color: #f4f7f9;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --header-bg: #ffffff;
+            --card-bg: #ffffff;
+            --border-color: #e9ecef;
+            --shadow: 0 5px 15px rgba(0,0,0,0.07);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* --- Header & Navigation --- */
+        .main-header {
+            background-color: var(--header-bg);
+            padding: 2rem 0;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .main-header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+        }
+
+        .main-header p {
+            font-size: 1.1rem;
+            color: var(--secondary-color);
+        }
+
+        .main-nav {
+            background-color: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .main-nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: 700;
+            transition: color 0.3s ease;
+        }
+
+        .main-nav a:hover {
+            color: #0056b3;
+        }
+        
+        /* --- General Section Styling --- */
+        section {
+            padding: 4rem 0;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 2rem;
+            color: #343a40;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            display: block;
+            width: 70px;
+            height: 4px;
+            background-color: var(--primary-color);
+            margin: 10px auto 0;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        /* --- Roadmap Timeline --- */
+        .timeline {
+            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .timeline::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            background-color: var(--primary-color);
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -3px;
+        }
+        .timeline-container {
+            padding: 10px 40px;
+            position: relative;
+            background-color: inherit;
+            width: 50%;
+        }
+        .timeline-container.left { left: 0; }
+        .timeline-container.right { left: 50%; }
+        .timeline-container::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            right: -17px;
+            background-color: white;
+            border: 4px solid var(--primary-color);
+            top: 15px;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .right::after { left: -16px; }
+        .timeline-content {
+            padding: 20px 30px;
+            background-color: white;
+            position: relative;
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+        }
+        .timeline-content h3 {
+            margin-top: 0; color: var(--primary-color);
+        }
+        .timeline-content .stage-badge {
+            background: var(--primary-color);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+         ul { padding-left: 20px; } li { margin-bottom: 0.5rem; }
+
+        /* --- Project Diagrams --- */
+        .diagram-container {
+            background-color: #fdfdfd;
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+        .diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Source Code Pro', monospace;
+        }
+        .diagram-layer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin: 1.5rem 0;
+            gap: 1rem;
+        }
+        .diagram-box {
+            background: #fff;
+            border: 2px solid var(--primary-color);
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .diagram-box.stream { border-color: #dc3545; }
+        .diagram-box.batch { border-color: #198754; }
+        .diagram-box.storage { border-color: #ffc107; }
+        .diagram-box strong { font-size: 0.9rem; }
+        .diagram-box span { font-size: 0.75rem; color: var(--secondary-color); display: block; }
+
+        .arrow {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 1rem;
+        }
+        .arrow.down::after { content: '▼'; }
+
+        /* Media Queries */
+        @media screen and (max-width: 768px) {
+            .timeline::after { left: 31px; }
+            .timeline-container { width: 100%; padding-left: 70px; padding-right: 25px; }
+            .timeline-container.right { left: 0%; }
+            .left::after, .right::after { left: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <h1>The Architect's Visual Roadmap</h1>
+        <p>A Structured Guide for the Senior Data Engineer Interview</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="#roadmap">Roadmap</a>
+        <a href="#projects">Project Architectures</a>
+    </nav>
+
+    <main class="container">
+        <section id="roadmap">
+            <h2>Interview Preparation Roadmap</h2>
+            <div class="timeline">
+                
+                <div class="timeline-container left">
+                    <div class="timeline-content">
+                        <span class="stage-badge">Stage 1</span>
+                        <h3>The Bedrock Foundation</h3>
+                        <h4>1. Advanced SQL</h4>
+                        <p>Focus on analytical functions (`Window Functions`, `CTEs`) and query optimization (`EXPLAIN`). Critical for analyzing Visa's transaction data.</p>
+                        <h4>2. Python for Data Engineering</h4>
+                        <p>Core data structures and key libraries like `Pandas` and `Boto3`. The language of glue code and automation.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-container right">
+                    <div class="timeline-content">
+                        <span class="stage-badge">Stage 2</span>
+                        <h3>Core Big Data Toolbox</h3>
+                        <h4>3. Apache Kafka</h4>
+                        <p>Understand the Producer/Broker/Consumer architecture. Essential for real-time transaction processing and fraud detection.</p>
+                        <h4>4. Apache Spark</h4>
+                        <p>Master the Driver/Executor model and performance optimization (partitioning, shuffling). The engine for all large-scale ETL and ML feature engineering.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-container left">
+                    <div class="timeline-content">
+                        <span class="stage-badge">Stage 3</span>
+                        <h3>Cloud & Orchestration Workshop</h3>
+                        <h4>5. AWS Cloud Platform</h4>
+                        <p>Deep knowledge of **EMR** (especially cost optimization), **Athena** (for querying the data lake), S3, and IAM is mandatory for a Platform Architect.</p>
+                        <h4>6. Orchestration & Automation</h4>
+                        <p>Understand **Airflow** for scheduling complex pipelines and **Terraform** for building repeatable, manageable infrastructure (IaC).</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="projects">
+            <h2>Project Architecture Blueprints</h2>
+            
+            <div class="card">
+                <h3>Project 1: Real-Time Fraud Detection System</h3>
+                <p>This demonstrates a Lambda Architecture, handling both real-time (speed) and batch layers to support analytics and machine learning. It's highly relevant to Visa's core business.</p>
+                <div class="diagram-container">
+                    <div class="diagram">
+                        <!-- Layer 1: Ingestion -->
+                        <div class="diagram-layer">
+                            <div class="diagram-box"><strong>Sources</strong><span>POS, Web, Mobile</span></div>
+                            <div class="arrow">→</div>
+                            <div class="diagram-box stream"><strong>Kafka</strong><span>Ingestion & Buffer</span></div>
+                        </div>
+                        <div class="arrow down"></div>
+
+                        <!-- Layer 2: Branching to Speed and Batch -->
+                        <div class="diagram-layer">
+                             <div class="diagram-box stream"><strong>Spark Streaming</strong><span>on EMR (Real-Time)</span></div>
+                             <div class="arrow">→</div>
+                             <div class="diagram-box storage"><strong>S3 Data Lake</strong><span>Raw Event Archive</span></div>
+                        </div>
+                        <div class="arrow down"></div>
+
+                        <!-- Layer 3: Outputs -->
+                         <div class="diagram-layer">
+                             <div class="diagram-box"><strong>Alerts / Dashboards</strong><span>Real-time Insights</span></div>
+                             <div class="arrow"></div>
+                             <div class="diagram-box batch"><strong>Airflow &amp; Spark Batch</strong><span>on EMR (Model Training)</span></div>
+                        </div>
+                    </div>
+                </div>
+                <h4>Architectural Discussion Points:</h4>
+                <ul>
+                    <li><strong>Ingestion:</strong> Use Kafka to decouple sources and handle high throughput. Key messages by `customer_id` for in-order processing.</li>
+                    <li><strong>Speed Layer:</strong> A stateful Spark Streaming job on a persistent EMR cluster analyzes events over short windows to spot anomalies instantly.</li>
+                    <li><strong>Batch Layer:</strong> A separate consumer archives raw events to S3. Airflow orchestrates daily batch jobs on transient EMR clusters to train new fraud models on historical data.</li>
+                </ul>
+            </div>
+
+            <div class="card" style="margin-top: 2rem;">
+                <h3>Project 2: Customer 360 Data Warehouse</h3>
+                <p>This showcases the ability to build a traditional, robust data warehouse by integrating various data sources, a core competency for any large enterprise.</p>
+                <div class="diagram-container">
+                    <div class="diagram">
+                        <!-- Layer 1: Sources -->
+                        <div class="diagram-layer">
+                             <div class="diagram-box"><strong>Databases</strong><span>Oracle, MySQL</span></div>
+                             <div class="diagram-box"><strong>Web Logs</strong><span>Clickstream Data</span></div>
+                        </div>
+                         <div class="arrow down"></div>
+                        
+                        <!-- Layer 2: Ingestion -->
+                        <div class="diagram-layer">
+                             <div class="diagram-box batch"><strong>Airflow</strong><span>Batch Ingestion</span></div>
+                             <div class="diagram-box stream"><strong>Kafka</strong><span>Stream Ingestion</span></div>
+                        </div>
+                        <div class="arrow down"></div>
+                        
+                        <!-- Layer 3: Storage & Processing -->
+                        <div class="diagram-layer">
+                             <div class="diagram-box storage"><strong>S3 Data Lake</strong><span>Raw → Processed</span></div>
+                             <div class="arrow">→</div>
+                             <div class="diagram-box batch"><strong>Spark on EMR</strong><span>ETL & Modeling</span></div>
+                        </div>
+                        <div class="arrow down"></div>
+                        
+                        <!-- Layer 4: Serving -->
+                        <div class="diagram-layer">
+                            <div class="diagram-box storage"><strong>Amazon Redshift</strong><span>Star Schema DWH</span></div>
+                             <div class="arrow">→</div>
+                            <div class="diagram-box"><strong>BI Tools</strong><span>Tableau, etc.</span></div>
+                        </div>
+                    </div>
+                </div>
+                <h4>Architectural Discussion Points:</h4>
+                <ul>
+                    <li><strong>Ingestion:</strong> A hybrid strategy using Airflow for batch pulls from databases and Kafka for real-time web logs. All data lands in S3.</li>
+                    <li><strong>ETL & Modeling:</strong> Spark on EMR is the workhorse for cleaning, de-duplicating, and transforming data. This is where you would model the data into a **Star Schema** for optimal analytical performance.</li>
+                    <li><strong>Data Warehouse:</strong> The final, curated data is loaded into Amazon Redshift, which serves as the single source of truth for business intelligence and reporting.</li>
+                </ul>
+            </div>
+
+        </section>
+    </main>
+</body>
+</html>
